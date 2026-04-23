@@ -1,5 +1,6 @@
 import { useMetronomeStore } from '../store/metronomeStore'
 import { useMetronome } from '../hooks/useMetronome'
+import { isBeatFull } from '../engine/musicTheory'
 import Icon from './Icon'
 
 function formatTime(secs) {
@@ -9,8 +10,15 @@ function formatTime(secs) {
 }
 
 export default function PlaybackControls({ compact = false }) {
-  const { isPlaying, elapsedTime, measureCount, timeSignature } = useMetronomeStore()
+  const { isPlaying, elapsedTime, measureCount, timeSignature, measures } = useMetronomeStore()
   const { play, stop, pause } = useMetronome()
+
+  // Play is only allowed when every beat is exactly full — a partial beat
+  // would schedule a shorter click than the user drew and drift the tempo.
+  const allBeatsFull = measures.every((m) =>
+    m.beats.every((b) => isBeatFull(b, timeSignature.noteValue))
+  )
+  const canPlay = isPlaying || allBeatsFull
 
   if (compact) {
     return (
@@ -23,7 +31,11 @@ export default function PlaybackControls({ compact = false }) {
         </button>
         <button
           onClick={isPlaying ? pause : play}
-          className="size-14 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30 hover:scale-105 transition-transform"
+          disabled={!canPlay}
+          title={!canPlay ? 'Every beat must be exactly full before playing' : (isPlaying ? 'Pause' : 'Play')}
+          className={`size-14 rounded-full flex items-center justify-center text-white shadow-lg transition-transform ${
+            canPlay ? 'bg-primary shadow-primary/30 hover:scale-105' : 'bg-slate-600/60 cursor-not-allowed opacity-60'
+          }`}
         >
           <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-3xl" />
         </button>
@@ -35,29 +47,32 @@ export default function PlaybackControls({ compact = false }) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-center gap-6">
         <button
+          type="button"
+          onClick={isPlaying ? pause : play}
+          disabled={!canPlay}
+          title={!canPlay ? 'Every beat must be exactly full before playing' : (isPlaying ? 'Pause' : 'Play')}
+          className={`size-20 rounded-full flex items-center justify-center text-white shadow-2xl transition-all ${
+            canPlay ? 'bg-primary shadow-primary/40 active:scale-90' : 'bg-slate-600/60 cursor-not-allowed opacity-60'
+          }`}
+        >
+          <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-5xl" />
+        </button>
+
+        <button
+          type="button"
           onClick={stop}
           className="size-14 rounded-full bg-slate-200 dark:bg-primary/20 flex items-center justify-center text-slate-700 dark:text-primary active:scale-95 transition-transform"
           title="Stop"
         >
           <Icon name="stop" className="text-2xl" />
         </button>
-
-        <button
-          onClick={isPlaying ? pause : play}
-          className="size-20 rounded-full bg-primary flex items-center justify-center text-white shadow-2xl shadow-primary/40 active:scale-90 transition-all"
-          title={isPlaying ? 'Pause' : 'Play'}
-        >
-          <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-5xl" />
-        </button>
-
-        <button
-          onClick={() => { stop(); setTimeout(play, 50) }}
-          className="size-14 rounded-full bg-slate-200 dark:bg-primary/20 flex items-center justify-center text-slate-700 dark:text-primary active:scale-95 transition-transform"
-          title="Restart"
-        >
-          <Icon name="replay" className="text-2xl" />
-        </button>
       </div>
+
+      {!canPlay && (
+        <p className="text-[11px] text-amber-400 text-center -mt-1">
+          Fill every beat exactly before playing
+        </p>
+      )}
 
       <div className="grid grid-cols-3 gap-2 text-center border-t border-slate-200 dark:border-primary/10 pt-3 mt-1">
         <div>

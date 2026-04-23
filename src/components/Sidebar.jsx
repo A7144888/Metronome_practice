@@ -1,16 +1,10 @@
 import Icon from './Icon'
 import { useMetronomeStore } from '../store/metronomeStore'
 
-const NAV_ITEMS = [
-  { id: 'my-rhythms', icon: 'music_note', label: 'My Rhythms', view: 'presets' },
-  { id: 'odd-meters', icon: 'grid_4x4', label: 'Odd Meters', view: 'presets' },
-  { id: 'funk-grooves', icon: 'reorder', label: 'Funk Grooves', view: 'presets' },
-  { id: 'polyrhythms', icon: 'analytics', label: 'Polyrhythms', view: 'presets' },
-]
-
 const LIB_ITEMS = [
-  { id: 'favorites', icon: 'star', label: 'Favorites' },
-  { id: 'recent', icon: 'history', label: 'Recent' },
+  { id: 'my-rhythms', icon: 'music_note', label: 'My Rhythms' },
+  { id: 'favorites',  icon: 'star',       label: 'Favorites'  },
+  { id: 'recent',     icon: 'history',    label: 'Recent'     },
 ]
 
 export default function Sidebar() {
@@ -31,9 +25,9 @@ export default function Sidebar() {
       <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
         <div className="py-2">
           <p className="px-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2">
-            Categories
+            Library
           </p>
-          {NAV_ITEMS.map((item) => {
+          {LIB_ITEMS.map((item) => {
             const active = selectedCategory === item.id
             return (
               <button
@@ -42,29 +36,6 @@ export default function Sidebar() {
                   setSelectedCategory(item.id)
                   setView('presets')
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium text-sm transition-colors ${
-                  active
-                    ? 'bg-primary/10 text-primary'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-primary/5'
-                }`}
-              >
-                <Icon name={item.icon} className="text-xl" />
-                {item.label}
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="py-2 border-t border-slate-200 dark:border-primary/10">
-          <p className="px-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] mb-2">
-            Library
-          </p>
-          {LIB_ITEMS.map((item) => {
-            const active = selectedCategory === item.id
-            return (
-              <button
-                key={item.id}
-                onClick={() => setSelectedCategory(item.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                   active
                     ? 'bg-primary/10 text-primary font-medium'

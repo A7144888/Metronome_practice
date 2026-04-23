@@ -3,38 +3,38 @@ import {
   NOTE_VALUES,
   NOTE_SYMBOLS,
   NOTE_SHORT_LABELS,
+  TICKS_PER_QUARTER,
   validateBeat,
-  subdivDurationQNB,
-  beatCapacityQNB,
-  beatUsedQNB,
-  roundQNB,
+  subdivDurationTicks,
+  beatCapacityTicks,
+  beatUsedTicks,
 } from '../engine/musicTheory'
 import Icon from './Icon'
 
 // ─── Accent config ─────────────────────────────────────────────────────────
 
 const ACCENT_CONFIG = {
-  strong: { label: 'S', ring: 'ring-primary', bg: 'bg-primary', text: 'text-white', dot: 'bg-primary' },
-  medium: { label: 'M', ring: 'ring-orange-500', bg: 'bg-orange-500', text: 'text-white', dot: 'bg-orange-500' },
-  normal: { label: 'N', ring: 'ring-slate-500', bg: 'bg-slate-500', text: 'text-white', dot: 'bg-slate-500' },
-  none:   { label: '–', ring: 'ring-slate-600', bg: 'bg-transparent', text: 'text-slate-400', dot: 'bg-transparent border border-slate-500' },
+  strong: { label: 'S', ring: 'ring-primary',    bg: 'bg-primary',       text: 'text-white',      dot: 'bg-primary' },
+  medium: { label: 'M', ring: 'ring-orange-500',  bg: 'bg-orange-500',    text: 'text-white',      dot: 'bg-orange-500' },
+  normal: { label: 'N', ring: 'ring-slate-500',   bg: 'bg-slate-500',     text: 'text-white',      dot: 'bg-slate-500' },
+  none:   { label: '–', ring: 'ring-slate-600',   bg: 'bg-transparent',   text: 'text-slate-400',  dot: 'bg-transparent border border-slate-500' },
 }
 
 // ─── Beat capacity bar ─────────────────────────────────────────────────────
 
 function BeatCapacityBar({ beat, noteValue }) {
-  const info = validateBeat(beat, noteValue)
-  const pct = Math.min(100, info.percentFilled)
+  const info    = validateBeat(beat, noteValue)
+  const pct     = Math.min(100, info.percentFilled)
   const overflow = info.overflow
-  const exact = info.exact
+  const exact   = info.exact
 
-  let barColor = 'bg-primary/60'
+  let barColor  = 'bg-primary/60'
   if (overflow) barColor = 'bg-red-500'
   else if (exact) barColor = 'bg-green-500'
 
-  let statusText = `${roundQNB(info.used)} / ${info.capacity} beats used`
-  if (exact) statusText = 'Beat full ✓'
-  if (overflow) statusText = `Overflow by ${roundQNB(Math.abs(info.remaining))} beats`
+  let statusText = `${info.used} / ${info.capacity}\u03C4`   // τ = ticks
+  if (exact)    statusText = 'Beat full \u2713'
+  if (overflow) statusText = `Overflow by ${Math.abs(info.remaining)}\u03C4`
 
   return (
     <div className="flex items-center gap-2">
@@ -58,27 +58,28 @@ function BeatCapacityBar({ beat, noteValue }) {
 // ─── Note value pill selector ──────────────────────────────────────────────
 
 function NoteValuePicker({ sd, measureId, beatId, beat, noteValue, store }) {
-  const cap = beatCapacityQNB(noteValue)
+  const cap       = beatCapacityTicks(noteValue)
+  const carryOver = beat.carryOver ?? 0
 
   return (
     <div className="flex flex-wrap gap-1">
       {NOTE_VALUES.map((nv) => {
-        const dur = subdivDurationQNB({ value: nv, dotted: sd.dotted })
-        const otherUsed = beatUsedQNB(beat.subdivisions.filter((x) => x.id !== sd.id))
-        const wouldOverflow = roundQNB(otherUsed + dur) > cap + 1 / 128
-        const isActive = sd.value === nv
+        const dur        = subdivDurationTicks({ value: nv, dotted: sd.dotted })
+        const otherUsed  = beatUsedTicks(beat.subdivisions.filter((x) => x.id !== sd.id))
+        const wouldOver  = otherUsed + dur + carryOver > cap
+        const isActive   = sd.value === nv
 
         return (
           <button
             key={nv}
-            disabled={wouldOverflow && !isActive}
+            disabled={wouldOver && !isActive}
             onClick={() => store.setSubdivisionValue(measureId, beatId, sd.id, nv)}
             title={nv}
             className={`
               px-2 py-1 rounded text-xs font-bold transition-all border
               ${isActive
                 ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
-                : wouldOverflow
+                : wouldOver
                 ? 'bg-transparent border-slate-700 text-slate-600 cursor-not-allowed opacity-40'
                 : 'bg-slate-800 border-slate-700 hover:border-primary/50 hover:text-primary text-slate-300 cursor-pointer'
               }
@@ -95,17 +96,17 @@ function NoteValuePicker({ sd, measureId, beatId, beat, noteValue, store }) {
 // ─── Single note card ──────────────────────────────────────────────────────
 
 function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, store, isCurrentlyPlaying }) {
-  const accent = sd.accent || 'normal'
-  const acfg = ACCENT_CONFIG[accent] || ACCENT_CONFIG.normal
+  const accent  = sd.accent || 'normal'
+  const acfg    = ACCENT_CONFIG[accent] || ACCENT_CONFIG.normal
+  const dur     = subdivDurationTicks(sd)
+  const cap     = beatCapacityTicks(noteValue)
+  const carryOver = beat.carryOver ?? 0
 
-  const dur = subdivDurationQNB(sd)
-
-  const canTie = sdIdx < totalSubs - 1
-  const canDot = (() => {
-    const cap = beatCapacityQNB(noteValue)
-    const otherUsed = beatUsedQNB(beat.subdivisions.filter((x) => x.id !== sd.id))
-    const dottedDur = subdivDurationQNB({ value: sd.value, dotted: true })
-    return !sd.dotted || roundQNB(otherUsed + dottedDur) <= cap + 1 / 128
+  const canTie  = sdIdx < totalSubs - 1
+  const canDot  = (() => {
+    const otherUsed  = beatUsedTicks(beat.subdivisions.filter((x) => x.id !== sd.id))
+    const dottedTicks = subdivDurationTicks({ value: sd.value, dotted: true })
+    return !sd.dotted || otherUsed + dottedTicks + carryOver <= cap
   })()
 
   return (
@@ -118,7 +119,7 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
         }
       `}
     >
-      {/* Top row: note symbol + duration + delete */}
+      {/* Top row: note symbol + tick count + delete */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-2xl leading-none select-none" title={sd.value}>
@@ -130,7 +131,9 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
               {sd.value.charAt(0).toUpperCase() + sd.value.slice(1)}
               {sd.dotted && ' (Dotted)'}
             </span>
-            <span className="text-[10px] text-slate-500 font-mono">{dur} QNB</span>
+            <span className="text-[10px] text-slate-500 font-mono">
+              {`${dur}\u03C4 / ${TICKS_PER_QUARTER}\u03C4`}
+            </span>
           </div>
         </div>
         {totalSubs > 1 && (
@@ -158,7 +161,7 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
         {/* Accent cycler */}
         <button
           onClick={() => {
-            const idx = ACCENT_TYPES.indexOf(accent)
+            const idx  = ACCENT_TYPES.indexOf(accent)
             const next = ACCENT_TYPES[(idx + 1) % ACCENT_TYPES.length]
             store.updateSubdivision(measureId, beatId, sd.id, { accent: next })
           }}
@@ -185,9 +188,9 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
               : 'bg-transparent border-slate-700 text-slate-600 cursor-not-allowed opacity-40'
             }
           `}
-          title={sd.dotted ? 'Remove dot (÷1.5)' : 'Add dot (×1.5)'}
+          title={sd.dotted ? 'Remove dot (\u00f71.5)' : 'Add dot (\u00d71.5)'}
         >
-          •&nbsp;DOT
+          &bull;&nbsp;DOT
         </button>
 
         {/* Tie toggle */}
@@ -211,14 +214,14 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
               : 'Tie to next note (no re-attack)'
           }
         >
-          ⌢&nbsp;TIE
+          {'\u2322\u00A0TIE'}
         </button>
       </div>
 
       {/* Tie arc indicator */}
       {sd.tie && (
         <div className="absolute -right-3 top-1/2 -translate-y-1/2 text-sky-400 text-xl pointer-events-none select-none">
-          ⌢
+          {'\u2322'}
         </div>
       )}
     </div>
@@ -228,7 +231,7 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
 // ─── Beat row ──────────────────────────────────────────────────────────────
 
 function BeatRow({ measure, beat, beatIdx, currentBeat, currentSubdiv, isPlaying, timeSignature }) {
-  const store = useMetronomeStore()
+  const store        = useMetronomeStore()
   const { noteValue } = timeSignature
   const isActiveBeat = isPlaying && currentBeat === beatIdx
 
@@ -304,17 +307,17 @@ export default function SubdivisionEditor() {
         </h3>
         <div className="flex flex-wrap gap-3 text-[10px]">
           {[
-            ['bg-primary', 'Strong'],
-            ['bg-orange-500', 'Medium'],
-            ['bg-slate-500', 'Normal'],
+            ['bg-primary',     'Strong'],
+            ['bg-orange-500',  'Medium'],
+            ['bg-slate-500',   'Normal'],
           ].map(([cls, label]) => (
             <span key={label} className="flex items-center gap-1 text-slate-400">
               <span className={`w-2 h-2 rounded-full ${cls}`} />
               {label}
             </span>
           ))}
-          <span className="flex items-center gap-1 text-amber-400">•&nbsp;Dotted</span>
-          <span className="flex items-center gap-1 text-sky-400">⌢&nbsp;Tied</span>
+          <span className="flex items-center gap-1 text-amber-400">&bull;&nbsp;Dotted</span>
+          <span className="flex items-center gap-1 text-sky-400">{'\u2322\u00A0Tied'}</span>
         </div>
       </div>
 

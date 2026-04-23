@@ -1,164 +1,178 @@
 /**
  * Music Theory Utility Module
  *
- * All durations are expressed in "quarter-note beats" (QNB).
- * 1 QNB = one quarter note duration.
+ * All durations are expressed as integer ticks.
+ * TICKS_PER_QUARTER = 480 — supports whole through 32nd notes and triplets
+ * with exact integer division:  480 % 2 = 0, % 3 = 0, % 4 = 0, % 8 = 0.
+ */
+
+export const TICKS_PER_QUARTER = 480
+
+/**
+ * Base tick durations for each note value (no dot modifier applied).
+ * Every value is a guaranteed exact integer.
  *
- * Floating-point rounding: we round all computed values to a precision
- * of 1/128 of a quarter note (≈0.0078) to avoid 0.999999… artifacts.
+ * | Note           | Ticks  |
+ * |----------------|--------|
+ * | whole          | 1920   |
+ * | half           | 960    |
+ * | quarter        | 480    |
+ * | eighth         | 240    |
+ * | sixteenth      | 120    |
+ * | thirty-second  | 60     |
+ * | triplet        | 160    | (1/3 of a quarter: 480 / 3)
  */
-
-const ROUND_FACTOR = 128 // round to nearest 1/128 QNB
-
-export function roundQNB(val) {
-  return Math.round(val * ROUND_FACTOR) / ROUND_FACTOR
+export const BASE_DURATIONS_TICKS = {
+  whole:           TICKS_PER_QUARTER * 4,    // 1920
+  half:            TICKS_PER_QUARTER * 2,    // 960
+  quarter:         TICKS_PER_QUARTER,        // 480
+  eighth:          TICKS_PER_QUARTER / 2,    // 240  (480 % 2 === 0 ✓)
+  sixteenth:       TICKS_PER_QUARTER / 4,    // 120  (480 % 4 === 0 ✓)
+  'thirty-second': TICKS_PER_QUARTER / 8,   // 60   (480 % 8 === 0 ✓)
+  triplet:         TICKS_PER_QUARTER / 3,   // 160  (480 % 3 === 0 ✓)
 }
 
-/** Base quarter-note beat durations for each note value (no dot) */
-export const BASE_DURATIONS_QNB = {
-  whole: 4,
-  half: 2,
-  quarter: 1,
-  eighth: 0.5,
-  sixteenth: 0.25,
-  'thirty-second': 0.125,
-  triplet: 1 / 3,   // triplet = 1/3 of a quarter
-}
-
-export const NOTE_VALUES = Object.keys(BASE_DURATIONS_QNB)
+export const NOTE_VALUES = Object.keys(BASE_DURATIONS_TICKS)
 
 /**
- * Returns the actual duration of a subdivision in QNBs,
- * accounting for dotted flag and triplet grouping.
+ * Integer tick duration of a subdivision.
  *
- * Rules:
- *  - dotted: duration × 1.5
- *  - triplet: already encoded as base 1/3; dotted triplet = 1/2 (valid in music)
+ * Dotted modifier applies × 3 / 2 with multiply-before-divide to avoid truncation.
+ * At TPQ=480 all dotted values are exact:
+ *   dotted quarter = 480 * 3 / 2 = 720 ✓
+ *   dotted eighth  = 240 * 3 / 2 = 360 ✓
+ *   dotted triplet = 160 * 3 / 2 = 240 ✓
  */
-export function subdivDurationQNB(sd) {
-  const base = BASE_DURATIONS_QNB[sd.value] ?? 1
-  const dotFactor = sd.dotted ? 1.5 : 1
-  return roundQNB(base * dotFactor)
+export function subdivDurationTicks(sd) {
+  const base = BASE_DURATIONS_TICKS[sd.value] ?? TICKS_PER_QUARTER
+  return sd.dotted ? (base * 3 / 2) : base
 }
 
 /**
- * How many QNBs are allowed per beat given the time signature.
- *   beatCapacityQNB = 4 / noteValue
- * e.g. 4/4 → 4/4 = 1, 6/8 → 4/8 = 0.5
+ * Beat capacity in ticks for the given time-signature note value.
+ *   noteValue = 4  →  (480 * 4) / 4 = 480  (one quarter note)
+ *   noteValue = 8  →  (480 * 4) / 8 = 240  (one eighth note)
+ *   noteValue = 2  →  (480 * 4) / 2 = 960  (one half note)
  */
-export function beatCapacityQNB(noteValue) {
-  return roundQNB(4 / noteValue)
+export function beatCapacityTicks(noteValue) {
+  return (TICKS_PER_QUARTER * 4) / noteValue
 }
 
 /**
- * Total QNBs used by all subdivisions in a beat.
+ * Total ticks consumed by all subdivisions in a beat.
  */
-export function beatUsedQNB(subdivisions) {
-  return roundQNB(subdivisions.reduce((acc, sd) => acc + subdivDurationQNB(sd), 0))
+export function beatUsedTicks(subdivisions) {
+  return subdivisions.reduce((acc, sd) => acc + subdivDurationTicks(sd), 0)
 }
 
 /**
- * Remaining capacity in a beat.
- * Negative → overflow.
+ * Remaining ticks in a beat (negative = overflow).
+ * carryOver (ticks arriving from a tie in the previous beat) reduces available space.
  */
-export function beatRemainingQNB(beat, noteValue) {
-  const cap = beatCapacityQNB(noteValue)
-  const used = beatUsedQNB(beat.subdivisions)
-  return roundQNB(cap - used)
+export function beatRemainingTicks(beat, noteValue) {
+  const cap = beatCapacityTicks(noteValue)
+  const used = beatUsedTicks(beat.subdivisions)
+  return cap - used - (beat.carryOver ?? 0)
 }
 
-/**
- * Is the beat exactly full? (within rounding tolerance)
- */
+/** True when the beat is exactly filled — no gap, no overflow. */
 export function isBeatFull(beat, noteValue) {
-  return Math.abs(beatRemainingQNB(beat, noteValue)) < 1 / ROUND_FACTOR
+  return beatRemainingTicks(beat, noteValue) === 0
 }
 
-/**
- * Is the beat overflowing?
- */
+/** True when placed notes exceed beat capacity. */
 export function isBeatOverflow(beat, noteValue) {
-  return beatRemainingQNB(beat, noteValue) < -(1 / ROUND_FACTOR)
+  return beatRemainingTicks(beat, noteValue) < 0
 }
 
 /**
- * Would adding this note value (+ dotted) to the beat cause overflow?
+ * Would adding this note value (+ optional dot) overflow the beat?
  */
 export function wouldOverflow(beat, noteValue, newSdValue, dotted = false) {
-  const newDur = subdivDurationQNB({ value: newSdValue, dotted })
-  const remaining = beatRemainingQNB(beat, noteValue)
-  return newDur > remaining + 1 / ROUND_FACTOR
+  const newTicks = subdivDurationTicks({ value: newSdValue, dotted })
+  return newTicks > beatRemainingTicks(beat, noteValue)
 }
 
 /**
- * Validation result for a single beat.
+ * Full validation summary for a single beat.
  */
 export function validateBeat(beat, noteValue) {
-  const cap = beatCapacityQNB(noteValue)
-  const used = beatUsedQNB(beat.subdivisions)
-  const remaining = roundQNB(cap - used)
-  const overflow = remaining < -(1 / ROUND_FACTOR)
-  const exact = Math.abs(remaining) < 1 / ROUND_FACTOR
+  const cap      = beatCapacityTicks(noteValue)
+  const carryOver = beat.carryOver ?? 0
+  const used     = beatUsedTicks(beat.subdivisions)
+  const remaining = cap - used - carryOver
 
   return {
     capacity: cap,
+    carryOver,
     used,
     remaining,
-    overflow,
-    exact,
-    percentFilled: Math.min(100, roundQNB((used / cap) * 100)),
+    overflow:      remaining < 0,
+    exact:         remaining === 0,
+    percentFilled: Math.min(100, Math.round(((used + carryOver) / cap) * 100)),
   }
 }
 
 /**
- * Human-readable label for a subdivision.
- *   e.g. "Dotted Eighth", "Quarter (Triplet)"
+ * Human-readable label for a subdivision — e.g. "Dotted Eighth".
  */
 export function subdivLabel(sd) {
   const name = sd.value.charAt(0).toUpperCase() + sd.value.slice(1)
-  const dot = sd.dotted ? 'Dotted ' : ''
-  return `${dot}${name}`
+  return `${sd.dotted ? 'Dotted ' : ''}${name}`
 }
 
-/**
- * Unicode symbol for note value (approximate, for display)
- */
+/** Unicode music symbols for visual display. */
 export const NOTE_SYMBOLS = {
-  whole: '𝅝',
-  half: '𝅗𝅥',
-  quarter: '♩',
-  eighth: '♪',
-  sixteenth: '♬',
+  whole:           '𝅝',
+  half:            '𝅗𝅥',
+  quarter:         '♩',
+  eighth:          '♪',
+  sixteenth:       '♬',
   'thirty-second': '𝅘𝅥𝅯',
-  triplet: '⅓',
+  triplet:         '⅓',
 }
 
-/**
- * Short display labels for note values
- */
+/** Short human labels for note values. */
 export const NOTE_SHORT_LABELS = {
-  whole: '1',
-  half: '½',
-  quarter: '¼',
-  eighth: '⅛',
-  sixteenth: '1/16',
+  whole:           '1',
+  half:            '½',
+  quarter:         '¼',
+  eighth:          '⅛',
+  sixteenth:       '1/16',
   'thirty-second': '1/32',
-  triplet: '⅓',
+  triplet:         '⅓',
 }
 
 /**
- * Given a flat list of subdivisions with tie flags, build an array of
- * playback entries. Tied notes are merged: only the first note in a
- * tie chain fires a click; subsequent tied notes are silent but still
- * advance the clock.
+ * Build playback entries from a flat subdivision list.
+ * A note following a tied predecessor fires silently (no re-attack) but
+ * still advances the audio clock by its full tick duration.
  */
 export function buildPlaybackEntries(subdivisions) {
   return subdivisions.map((sd, idx) => {
     const prevTied = idx > 0 && subdivisions[idx - 1].tie === true
     return {
       ...sd,
-      silent: prevTied,        // previous note ties into this one → no attack
-      durationQNB: subdivDurationQNB(sd),
+      silent: prevTied,
+      durationTicks: subdivDurationTicks(sd),
     }
   })
+}
+
+/**
+ * Validate the full rhythm structure.
+ * Returns true if every beat satisfies:
+ *   usedTicks + carryOver <= beatMaxTicks   AND   all tick values are integers.
+ */
+export function validateStructure(measures, noteValue) {
+  const beatMax = beatCapacityTicks(noteValue)
+  for (const measure of measures) {
+    for (const beat of measure.beats) {
+      const carryOver = beat.carryOver ?? 0
+      const used = beatUsedTicks(beat.subdivisions)
+      if (used + carryOver > beatMax) return false
+      if (beat.subdivisions.some(sd => !Number.isInteger(subdivDurationTicks(sd)))) return false
+    }
+  }
+  return true
 }

@@ -19,7 +19,7 @@ function getTempoLabel(bpm) {
 }
 
 export default function BpmControl({ compact = false }) {
-  const { bpm, setBpm } = useMetronomeStore()
+  const { bpm, setBpm, adjustBpm } = useMetronomeStore()
   const [editing, setEditing] = useState(false)
   const [inputVal, setInputVal] = useState(String(bpm))
   const inputRef = useRef(null)
@@ -41,7 +41,8 @@ export default function BpmControl({ compact = false }) {
     return (
       <div className="flex items-center gap-3">
         <button
-          onClick={() => setBpm(bpm - 1)}
+          type="button"
+          onClick={() => adjustBpm(-1)}
           className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
         >
           <Icon name="remove" className="text-lg" />
@@ -71,7 +72,8 @@ export default function BpmControl({ compact = false }) {
           <div className="text-xs text-primary font-medium tracking-widest uppercase">BPM</div>
         </div>
         <button
-          onClick={() => setBpm(bpm + 1)}
+          type="button"
+          onClick={() => adjustBpm(1)}
           className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
         >
           <Icon name="add" className="text-lg" />
@@ -91,7 +93,8 @@ export default function BpmControl({ compact = false }) {
 
       <div className="flex items-center justify-center gap-4">
         <button
-          onClick={() => setBpm(bpm - 5)}
+          type="button"
+          onClick={() => adjustBpm(-5)}
           className="size-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
         >
           <Icon name="remove" className="text-xl" />
@@ -123,7 +126,8 @@ export default function BpmControl({ compact = false }) {
         </div>
 
         <button
-          onClick={() => setBpm(bpm + 5)}
+          type="button"
+          onClick={() => adjustBpm(5)}
           className="size-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
         >
           <Icon name="add" className="text-xl" />

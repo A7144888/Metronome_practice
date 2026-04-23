@@ -1,5 +1,5 @@
 import { useMetronomeStore } from '../store/metronomeStore'
-import { NOTE_SHORT_LABELS, NOTE_SYMBOLS, subdivDurationQNB, beatCapacityQNB } from '../engine/musicTheory'
+import { NOTE_SHORT_LABELS, NOTE_SYMBOLS, subdivDurationTicks, beatCapacityTicks } from '../engine/musicTheory'
 
 const ACCENT_GRID_COLORS = {
   strong: {
@@ -29,13 +29,13 @@ export default function SequenceGrid() {
     useMetronomeStore()
 
   // Flatten all notes to a display list with width proportional to duration
-  const beatCap = beatCapacityQNB(timeSignature.noteValue)
+  const beatCap = beatCapacityTicks(timeSignature.noteValue)
 
   const allNotes = []
   measures.forEach((measure) => {
     measure.beats.forEach((beat, bIdx) => {
       beat.subdivisions.forEach((sd, sIdx) => {
-        const dur = subdivDurationQNB(sd)
+        const dur = subdivDurationTicks(sd)
         allNotes.push({
           measureId: measure.id,
           beatId: beat.id,
