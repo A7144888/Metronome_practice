@@ -1,6 +1,14 @@
 import { useMetronomeStore } from '../store/metronomeStore'
 import { NOTE_SHORT_LABELS, NOTE_SYMBOLS, subdivDurationTicks, beatCapacityTicks } from '../engine/musicTheory'
 
+// Internal 'none' accent is displayed to users as "Pause".
+const ACCENT_DISPLAY_NAME = {
+  strong: 'strong',
+  medium: 'medium',
+  normal: 'normal',
+  none:   'pause',
+}
+
 const ACCENT_GRID_COLORS = {
   strong: {
     active: 'bg-primary border-primary shadow-glow-sm',
@@ -107,7 +115,7 @@ export default function SequenceGrid() {
                         <button
                           key={note.sdId}
                           onClick={() => cycleAccent(note)}
-                          title={`Beat ${note.beatIdx + 1} • ${note.value}${note.dotted ? ' dotted' : ''} • ${note.accent}`}
+                          title={`Beat ${note.beatIdx + 1} • ${note.value}${note.dotted ? ' dotted' : ''} • ${ACCENT_DISPLAY_NAME[note.accent] ?? note.accent}`}
                           style={{ flex: note.widthFraction }}
                           className={`
                             relative rounded border flex flex-col items-center justify-center gap-0.5
@@ -148,7 +156,7 @@ export default function SequenceGrid() {
       </div>
 
       <p className="text-[10px] text-slate-500 text-center">
-        Cell width = note duration • Click to cycle accent: Strong → Medium → Normal → None
+        Cell width = note duration • Click to cycle accent: Strong → Medium → Normal → Pause
       </p>
     </div>
   )

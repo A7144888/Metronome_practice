@@ -17,7 +17,15 @@ const ACCENT_CONFIG = {
   strong: { label: 'S', ring: 'ring-primary',    bg: 'bg-primary',       text: 'text-white',      dot: 'bg-primary' },
   medium: { label: 'M', ring: 'ring-orange-500',  bg: 'bg-orange-500',    text: 'text-white',      dot: 'bg-orange-500' },
   normal: { label: 'N', ring: 'ring-slate-500',   bg: 'bg-slate-500',     text: 'text-white',      dot: 'bg-slate-500' },
-  none:   { label: '–', ring: 'ring-slate-600',   bg: 'bg-transparent',   text: 'text-slate-400',  dot: 'bg-transparent border border-slate-500' },
+  none:   { label: 'P', ring: 'ring-slate-600',   bg: 'bg-transparent',   text: 'text-slate-400',  dot: 'bg-transparent border border-slate-500' },
+}
+
+// Display label for each accent (the internal 'none' is shown to users as "Pause")
+const ACCENT_DISPLAY_NAME = {
+  strong: 'Strong',
+  medium: 'Medium',
+  normal: 'Normal',
+  none:   'Pause',
 }
 
 // ─── Beat capacity bar ─────────────────────────────────────────────────────
@@ -169,10 +177,10 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
             flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold border transition-all
             ring-1 ${acfg.ring} ${acfg.bg} ${acfg.text}
           `}
-          title={`Accent: ${accent}`}
+          title={`Accent: ${ACCENT_DISPLAY_NAME[accent] ?? accent}`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${acfg.dot}`} />
-          {accent.toUpperCase()}
+          {(ACCENT_DISPLAY_NAME[accent] ?? accent).toUpperCase()}
         </button>
 
         {/* Dotted toggle */}

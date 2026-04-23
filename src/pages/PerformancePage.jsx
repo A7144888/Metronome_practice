@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import { useMetronomeStore } from '../store/metronomeStore'
 import { useMetronome } from '../hooks/useMetronome'
 import { isBeatFull } from '../engine/musicTheory'
@@ -44,6 +45,22 @@ export default function PerformancePage() {
   )
   const canPlay = isPlaying || allBeatsFull
 
+  // Inline-edit for BPM (matches EditorPage's click-to-edit behaviour)
+  const [editingBpm, setEditingBpm] = useState(false)
+  const [bpmInput, setBpmInput] = useState(String(bpm))
+  const bpmInputRef = useRef(null)
+
+  const commitBpm = () => {
+    const v = parseFloat(bpmInput)
+    if (!isNaN(v)) setBpm(v)
+    setEditingBpm(false)
+  }
+
+  const handleBpmKeyDown = (e) => {
+    if (e.key === 'Enter') commitBpm()
+    if (e.key === 'Escape') setEditingBpm(false)
+  }
+
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-background-light dark:bg-background-dark">
       {/* Top Navigation */}
@@ -82,8 +99,33 @@ export default function PerformancePage() {
               <Icon name="remove" className="text-3xl text-primary" />
             </button>
             <div className="flex flex-col items-center">
-              <span className="text-7xl font-bold">{bpm}</span>
-              <span className="text-primary font-bold tracking-[0.2em] uppercase text-sm">BPM</span>
+              {editingBpm ? (
+                <input
+                  ref={bpmInputRef}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="w-40 text-center text-7xl font-bold bg-transparent border-b-2 border-primary outline-none leading-none"
+                  value={bpmInput}
+                  onChange={(e) => setBpmInput(e.target.value.replace(/[^0-9]/g, ''))}
+                  onBlur={commitBpm}
+                  onKeyDown={handleBpmKeyDown}
+                  autoFocus
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBpmInput(String(bpm))
+                    setEditingBpm(true)
+                  }}
+                  title="Click to edit"
+                  className="text-7xl font-bold hover:text-primary transition-colors leading-none"
+                >
+                  {bpm}
+                </button>
+              )}
+              <span className="text-primary font-bold tracking-[0.2em] uppercase text-sm mt-2">BPM</span>
             </div>
             <button
               type="button"

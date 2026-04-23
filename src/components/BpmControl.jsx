@@ -94,7 +94,7 @@ export default function BpmControl({ compact = false }) {
       <div className="flex items-center justify-center gap-4">
         <button
           type="button"
-          onClick={() => adjustBpm(-5)}
+          onClick={() => adjustBpm(-1)}
           className="size-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
         >
           <Icon name="remove" className="text-xl" />
@@ -127,7 +127,7 @@ export default function BpmControl({ compact = false }) {
 
         <button
           type="button"
-          onClick={() => adjustBpm(5)}
+          onClick={() => adjustBpm(1)}
           className="size-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
         >
           <Icon name="add" className="text-xl" />
@@ -154,30 +154,12 @@ export default function BpmControl({ compact = false }) {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onPointerDown={tap}
-          className="flex-1 bg-slate-100 dark:bg-primary/10 hover:bg-slate-200 dark:hover:bg-primary/20 text-slate-700 dark:text-slate-300 font-bold py-2 rounded-lg transition-colors text-sm uppercase tracking-wider select-none"
-        >
-          Tap Tempo
-        </button>
-
-        <div className="flex gap-1">
-          {[60, 80, 100, 120, 140, 160].map((preset) => (
-            <button
-              key={preset}
-              onClick={() => setBpm(preset)}
-              className={`px-2 py-2 rounded-lg text-xs font-bold transition-colors ${
-                bpm === preset
-                  ? 'bg-primary text-white'
-                  : 'bg-slate-100 dark:bg-primary/5 hover:bg-primary/10 text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              {preset}
-            </button>
-          ))}
-        </div>
-      </div>
+      <button
+        onPointerDown={tap}
+        className="w-full bg-slate-100 dark:bg-primary/10 hover:bg-slate-200 dark:hover:bg-primary/20 text-slate-700 dark:text-slate-300 font-bold py-2 rounded-lg transition-colors text-sm uppercase tracking-wider select-none"
+      >
+        Tap Tempo
+      </button>
     </div>
   )
 }

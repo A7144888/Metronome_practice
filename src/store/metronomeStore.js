@@ -112,7 +112,11 @@ const createDefaultState = () => ({
   activePresetId:    null,
   searchQuery:       '',
   selectedCategory:  'my-rhythms',
+  recentPresetIds:   [],   // most-recent-first, capped (skill: data-integrity-guard)
+  filterTag:         'all', // 'all' | a time-sig tag like '4/4'
 })
+
+const RECENT_LIMIT = 10
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -221,7 +225,7 @@ export const useMetronomeStore = create((set, get) => ({
         subdivDurationTicks({ value: nv, dotted: false }) <= remaining
       )
       const bestValue = candidates.length > 0 ? candidates[0] : 'sixteenth'
-      const newSd     = { ...defaultSubdivision('none'), value: bestValue }
+      const newSd     = { ...defaultSubdivision('normal'), value: bestValue }
 
       const newMeasures = s.measures.map((m) =>
         m.id !== measureId
@@ -366,13 +370,18 @@ export const useMetronomeStore = create((set, get) => ({
     const preset = get().presets.find((p) => p.id === presetId)
     if (!preset) return
     const { beats, noteValue } = preset.timeSignature
-    set({
-      bpm:           preset.bpm,
-      timeSignature: preset.timeSignature,
-      measures:      [defaultMeasure(beats, noteValue)],
-      soundSet:      preset.soundSet,
-      activePresetId: presetId,
-      view:          'editor',
+    set((s) => {
+      // Bump this preset to the front of the recent list, capped at RECENT_LIMIT
+      const nextRecent = [presetId, ...s.recentPresetIds.filter((id) => id !== presetId)].slice(0, RECENT_LIMIT)
+      return {
+        bpm:            preset.bpm,
+        timeSignature:  preset.timeSignature,
+        measures:       [defaultMeasure(beats, noteValue)],
+        soundSet:       preset.soundSet,
+        activePresetId: presetId,
+        recentPresetIds: nextRecent,
+        view:           'editor',
+      }
     })
   },
 
@@ -401,6 +410,7 @@ export const useMetronomeStore = create((set, get) => ({
 
   setSearchQuery:      (searchQuery)      => set({ searchQuery }),
   setSelectedCategory: (selectedCategory) => set({ selectedCategory }),
+  setFilterTag:        (filterTag)        => set({ filterTag }),
 
   /**
    * True only when every beat is *exactly* full (used + carryOver === capacity).
