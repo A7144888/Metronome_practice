@@ -150,8 +150,19 @@ export function useMetronome() {
   useEffect(() => { audioEngine.updateSoundSet(soundSet) }, [soundSet])
 
   useEffect(() => {
-    if (isPlaying) audioEngine.updateSchedule(measures, timeSignature)
-  }, [measures, timeSignature, isPlaying])
+    if (!isPlaying) return
+    // If an edit left any beat partial/overflowing, stop playback immediately.
+    // Continuing would schedule clicks against an invalid bar (drifting tempo
+    // or silent gaps), so we force the user back to idle until they fix it.
+    const allFull = measures.every((m) =>
+      m.beats.every((b) => isBeatFull(b, timeSignature.noteValue))
+    )
+    if (!allFull) {
+      stop()
+      return
+    }
+    audioEngine.updateSchedule(measures, timeSignature)
+  }, [measures, timeSignature, isPlaying, stop])
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
 

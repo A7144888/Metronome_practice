@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMetronomeStore } from '../store/metronomeStore'
 import PresetCard from '../components/PresetCard'
 import Icon from '../components/Icon'
+import LibraryMenu from '../components/LibraryMenu'
 
 // ── Per-category metadata (title + empty-state text + icon) ─────────────
 const CATEGORY_META = {
@@ -91,7 +92,8 @@ export default function PresetsPage() {
       {/* Header */}
       <header className="h-20 border-b border-slate-200 dark:border-primary/10 flex items-center justify-between px-8 bg-white/50 dark:bg-background-dark/50 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold">{meta.title}</h2>
+          <LibraryMenu />
+          <h2 className="hidden md:block text-2xl font-bold">{meta.title}</h2>
           <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
             {filtered.length} Items
           </span>

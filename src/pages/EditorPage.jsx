@@ -8,6 +8,7 @@ import MixerPanel from '../components/MixerPanel'
 import PlaybackControls from '../components/PlaybackControls'
 import BeatIndicator from '../components/BeatIndicator'
 import Icon from '../components/Icon'
+import LibraryMenu from '../components/LibraryMenu'
 
 const TABS = [
   { id: 'grid', label: 'Grid', icon: 'grid_view' },
@@ -45,18 +46,16 @@ export default function EditorPage() {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-primary/20 px-6 py-4 bg-background-light dark:bg-background-dark/50 backdrop-blur-md sticky top-0 z-50 shrink-0">
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setView('presets')}
-            className="p-2 rounded-lg hover:bg-primary/10 text-slate-500 hover:text-primary transition-colors"
-          >
-            <Icon name="arrow_back" />
-          </button>
-          <div>
+          <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20 shrink-0">
+            <Icon name="timer" />
+          </div>
+          <div className="hidden lg:block">
             <h1 className="text-xl font-bold tracking-tight">
               Pro Metronome <span className="text-primary">Editor</span>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400">Studio Grade Timing Engine</p>
           </div>
+          <LibraryMenu />
         </div>
         <div className="flex items-center gap-4">
           <div className="hidden md:flex flex-col items-end">
