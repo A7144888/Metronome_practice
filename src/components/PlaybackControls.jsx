@@ -13,8 +13,6 @@ export default function PlaybackControls({ compact = false }) {
   const { isPlaying, elapsedTime, measureCount, timeSignature, measures } = useMetronomeStore()
   const { play, stop, pause } = useMetronome()
 
-  // Play is only allowed when every beat is exactly full — a partial beat
-  // would schedule a shorter click than the user drew and drift the tempo.
   const allBeatsFull = measures.every((m) =>
     m.beats.every((b) => isBeatFull(b, timeSignature.noteValue))
   )
@@ -25,7 +23,7 @@ export default function PlaybackControls({ compact = false }) {
       <div className="flex items-center gap-3">
         <button
           onClick={stop}
-          className="size-10 rounded-full bg-slate-200 dark:bg-primary/20 flex items-center justify-center text-slate-700 dark:text-primary hover:scale-105 transition-transform"
+          className="size-10 rounded-full bg-md-surface-low flex items-center justify-center text-md-on-surface-variant hover:bg-md-surface-low/80 active:scale-95 transition-all duration-300 ease-md3"
         >
           <Icon name="stop" className="text-xl" />
         </button>
@@ -33,8 +31,8 @@ export default function PlaybackControls({ compact = false }) {
           onClick={isPlaying ? pause : play}
           disabled={!canPlay}
           title={!canPlay ? 'Every beat must be exactly full before playing' : (isPlaying ? 'Pause' : 'Play')}
-          className={`size-14 rounded-full flex items-center justify-center text-white shadow-lg transition-transform ${
-            canPlay ? 'bg-primary shadow-primary/30 hover:scale-105' : 'bg-slate-600/60 cursor-not-allowed opacity-60'
+          className={`size-14 rounded-full flex items-center justify-center text-white shadow-md3-3 transition-all duration-300 ease-md3 ${
+            canPlay ? 'bg-md-primary hover:bg-md-primary/90 active:scale-95' : 'bg-md-outline/40 cursor-not-allowed opacity-60'
           }`}
         >
           <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-3xl" />
@@ -51,8 +49,8 @@ export default function PlaybackControls({ compact = false }) {
           onClick={isPlaying ? pause : play}
           disabled={!canPlay}
           title={!canPlay ? 'Every beat must be exactly full before playing' : (isPlaying ? 'Pause' : 'Play')}
-          className={`size-20 rounded-full flex items-center justify-center text-white shadow-2xl transition-all ${
-            canPlay ? 'bg-primary shadow-primary/40 active:scale-90' : 'bg-slate-600/60 cursor-not-allowed opacity-60'
+          className={`size-20 rounded-full flex items-center justify-center text-white shadow-md3-4 transition-all duration-300 ease-md3 ${
+            canPlay ? 'bg-md-primary hover:bg-md-primary/90 active:scale-90' : 'bg-md-outline/40 cursor-not-allowed opacity-60'
           }`}
         >
           <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-5xl" />
@@ -61,7 +59,7 @@ export default function PlaybackControls({ compact = false }) {
         <button
           type="button"
           onClick={stop}
-          className="size-14 rounded-full bg-slate-200 dark:bg-primary/20 flex items-center justify-center text-slate-700 dark:text-primary active:scale-95 transition-transform"
+          className="size-14 rounded-full bg-md-surface-low flex items-center justify-center text-md-on-surface-variant hover:bg-md-surface-low/80 active:scale-95 transition-all duration-300 ease-md3"
           title="Stop"
         >
           <Icon name="stop" className="text-2xl" />
@@ -69,23 +67,23 @@ export default function PlaybackControls({ compact = false }) {
       </div>
 
       {!canPlay && (
-        <p className="text-[11px] text-amber-400 text-center -mt-1">
+        <p className="text-[11px] text-md-error text-center -mt-1">
           Fill every beat exactly before playing
         </p>
       )}
 
-      <div className="grid grid-cols-3 gap-2 text-center border-t border-slate-200 dark:border-primary/10 pt-3 mt-1">
+      <div className="grid grid-cols-3 gap-2 text-center border-t border-md-outline/20 pt-3 mt-1">
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Time Sig</p>
-          <p className="text-lg font-bold">{timeSignature.beats}/{timeSignature.noteValue}</p>
+          <p className="text-[10px] uppercase tracking-widest text-md-on-surface-variant/70 font-medium">Time Sig</p>
+          <p className="text-lg font-medium text-md-fg">{timeSignature.beats}/{timeSignature.noteValue}</p>
         </div>
-        <div className="border-x border-slate-200 dark:border-primary/10">
-          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Measure</p>
-          <p className="text-lg font-bold">{measureCount}</p>
+        <div className="border-x border-md-outline/20">
+          <p className="text-[10px] uppercase tracking-widest text-md-on-surface-variant/70 font-medium">Measure</p>
+          <p className="text-lg font-medium text-md-fg">{measureCount}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">Timer</p>
-          <p className="text-lg font-bold">{formatTime(elapsedTime)}</p>
+          <p className="text-[10px] uppercase tracking-widest text-md-on-surface-variant/70 font-medium">Timer</p>
+          <p className="text-lg font-medium text-md-fg">{formatTime(elapsedTime)}</p>
         </div>
       </div>
     </div>

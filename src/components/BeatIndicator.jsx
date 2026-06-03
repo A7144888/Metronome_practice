@@ -24,16 +24,16 @@ export default function BeatIndicator() {
           <div
             key={i}
             className={`
-              flex-1 max-w-[80px] h-20 rounded-xl flex items-center justify-center border-2 transition-all duration-75
+              flex-1 max-w-[80px] h-20 rounded-lg flex items-center justify-center border-2 transition-all duration-100 ease-md3
               ${active
                 ? isFirst
-                  ? 'bg-primary border-primary shadow-glow text-white scale-105'
-                  : 'bg-slate-600 border-slate-500 text-white scale-105'
-                : 'bg-slate-200 dark:bg-primary/10 border-transparent text-slate-400 dark:text-slate-600'
+                  ? 'bg-md-primary border-md-primary shadow-glow text-white scale-105'
+                  : 'bg-md-on-surface-variant border-md-on-surface-variant text-white scale-105'
+                : 'bg-md-surface border-md-surface-low text-md-on-surface-variant'
               }
             `}
           >
-            <span className="font-bold text-2xl">{i + 1}</span>
+            <span className="font-medium text-2xl">{i + 1}</span>
           </div>
         )
       })}

@@ -43,7 +43,7 @@ export default function BpmControl({ compact = false }) {
         <button
           type="button"
           onClick={() => adjustBpm(-1)}
-          className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+          className="w-8 h-8 rounded-full bg-md-secondary-container flex items-center justify-center text-md-primary hover:bg-md-secondary-container/80 active:scale-95 transition-all duration-300 ease-md3"
         >
           <Icon name="remove" className="text-lg" />
         </button>
@@ -51,7 +51,7 @@ export default function BpmControl({ compact = false }) {
           {editing ? (
             <input
               ref={inputRef}
-              className="w-20 text-center text-2xl font-bold bg-transparent border-b-2 border-primary outline-none"
+              className="w-20 text-center text-2xl font-medium bg-transparent border-b-2 border-md-primary outline-none text-md-fg"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               onBlur={commit}
@@ -64,17 +64,17 @@ export default function BpmControl({ compact = false }) {
                 setInputVal(String(bpm))
                 setEditing(true)
               }}
-              className="text-2xl font-bold hover:text-primary transition-colors"
+              className="text-2xl font-medium hover:text-md-primary transition-colors duration-300 text-md-fg"
             >
               {bpm}
             </button>
           )}
-          <div className="text-xs text-primary font-medium tracking-widest uppercase">BPM</div>
+          <div className="text-xs text-md-primary font-medium tracking-widest uppercase">BPM</div>
         </div>
         <button
           type="button"
           onClick={() => adjustBpm(1)}
-          className="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+          className="w-8 h-8 rounded-full bg-md-secondary-container flex items-center justify-center text-md-primary hover:bg-md-secondary-container/80 active:scale-95 transition-all duration-300 ease-md3"
         >
           <Icon name="add" className="text-lg" />
         </button>
@@ -85,17 +85,17 @@ export default function BpmControl({ compact = false }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+        <h3 className="text-xs font-medium uppercase tracking-widest text-md-on-surface-variant">
           Tempo
         </h3>
-        <span className="text-xs text-slate-400 italic">{getTempoLabel(bpm)}</span>
+        <span className="text-xs text-md-on-surface-variant/70 italic">{getTempoLabel(bpm)}</span>
       </div>
 
       <div className="flex items-center justify-center gap-4">
         <button
           type="button"
           onClick={() => adjustBpm(-1)}
-          className="size-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+          className="size-10 rounded-full bg-md-secondary-container flex items-center justify-center text-md-primary hover:bg-md-secondary-container/80 active:scale-95 transition-all duration-300 ease-md3"
         >
           <Icon name="remove" className="text-xl" />
         </button>
@@ -104,7 +104,7 @@ export default function BpmControl({ compact = false }) {
           {editing ? (
             <input
               ref={inputRef}
-              className="w-24 text-center text-4xl font-bold bg-transparent border-b-2 border-primary outline-none"
+              className="w-24 text-center text-4xl font-medium bg-transparent border-b-2 border-md-primary outline-none text-md-fg"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               onBlur={commit}
@@ -117,18 +117,18 @@ export default function BpmControl({ compact = false }) {
                 setInputVal(String(bpm))
                 setEditing(true)
               }}
-              className="text-5xl font-bold hover:text-primary transition-colors leading-none"
+              className="text-5xl font-medium hover:text-md-primary transition-colors duration-300 leading-none text-md-fg"
             >
               {bpm}
             </button>
           )}
-          <span className="text-xs text-primary font-bold tracking-[0.3em] uppercase mt-1">BPM</span>
+          <span className="text-xs text-md-primary font-medium tracking-[0.3em] uppercase mt-1">BPM</span>
         </div>
 
         <button
           type="button"
           onClick={() => adjustBpm(1)}
-          className="size-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+          className="size-10 rounded-full bg-md-secondary-container flex items-center justify-center text-md-primary hover:bg-md-secondary-container/80 active:scale-95 transition-all duration-300 ease-md3"
         >
           <Icon name="add" className="text-xl" />
         </button>
@@ -144,10 +144,10 @@ export default function BpmControl({ compact = false }) {
           onChange={(e) => setBpm(Number(e.target.value))}
           className="w-full h-2 rounded-full cursor-pointer"
           style={{
-            background: `linear-gradient(to right, #ec1313 ${((bpm - 20) / 280) * 100}%, #374151 ${((bpm - 20) / 280) * 100}%)`,
+            background: `linear-gradient(to right, #6750A4 ${((bpm - 20) / 280) * 100}%, #E7E0EC ${((bpm - 20) / 280) * 100}%)`,
           }}
         />
-        <div className="flex justify-between text-[10px] text-slate-500 mt-1">
+        <div className="flex justify-between text-[10px] text-md-on-surface-variant/60 mt-1">
           <span>20</span>
           <span>160</span>
           <span>300</span>
@@ -156,7 +156,7 @@ export default function BpmControl({ compact = false }) {
 
       <button
         onPointerDown={tap}
-        className="w-full bg-slate-100 dark:bg-primary/10 hover:bg-slate-200 dark:hover:bg-primary/20 text-slate-700 dark:text-slate-300 font-bold py-2 rounded-lg transition-colors text-sm uppercase tracking-wider select-none"
+        className="w-full bg-md-secondary-container hover:bg-md-secondary-container/80 active:scale-95 text-md-on-secondary-container font-medium py-2.5 rounded-full transition-all duration-300 ease-md3 text-sm uppercase tracking-wider select-none"
       >
         Tap Tempo
       </button>

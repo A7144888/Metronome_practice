@@ -8,14 +8,14 @@ export default function App() {
 
   if (view === 'performance') {
     return (
-      <div className="dark min-h-screen bg-background-dark text-slate-100 flex">
+      <div className="min-h-screen bg-md-bg text-md-fg flex">
         <PerformancePage />
       </div>
     )
   }
 
   return (
-    <div className="dark min-h-screen bg-background-dark text-slate-100 flex overflow-hidden">
+    <div className="min-h-screen bg-md-bg text-md-fg flex overflow-hidden">
       <div className="flex-1 flex overflow-hidden min-w-0">
         {view === 'presets' && <PresetsPage />}
         {view === 'editor' && <EditorPage />}

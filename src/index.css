@@ -1,12 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: 'Roboto', sans-serif;
+  background-color: #FFFBFE;
+  color: #1C1B1F;
 }
 
 .material-symbols-outlined {
@@ -33,31 +32,34 @@ body {
   background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #4a2020;
+  background: #E7E0EC;
   border-radius: 10px;
 }
 
 @layer components {
   .beat-card {
-    @apply relative bg-white dark:bg-primary/5 border border-slate-200 dark:border-primary/10 rounded-xl p-4 transition-all;
+    @apply relative bg-md-surface border border-md-outline/20 rounded-lg p-4 transition-all duration-300 ease-md3;
   }
 
   .btn-primary {
-    @apply bg-primary hover:bg-primary/90 text-white font-bold py-2 px-4 rounded-lg transition-all shadow-lg shadow-primary/20;
+    @apply bg-md-primary hover:bg-md-primary/90 active:bg-md-primary/80 active:scale-95 text-white font-medium py-2 px-6 rounded-full transition-all duration-300 ease-md3 shadow-md3-1 hover:shadow-md3-2;
   }
 
   .btn-ghost {
-    @apply bg-slate-100 dark:bg-primary/10 hover:bg-slate-200 dark:hover:bg-primary/20 text-slate-700 dark:text-slate-200 font-bold py-2 px-4 rounded-lg transition-colors;
+    @apply bg-transparent hover:bg-md-primary/10 active:bg-md-primary/5 active:scale-95 text-md-primary font-medium py-2 px-6 rounded-full transition-all duration-300 ease-md3;
   }
 
-  .slider-thumb {
-    @apply absolute top-1/2 -translate-y-1/2 size-4 bg-white rounded-full border-2 border-primary shadow-lg cursor-pointer;
+  .btn-tonal {
+    @apply bg-md-secondary-container hover:bg-md-secondary-container/80 active:bg-md-secondary-container/60 active:scale-95 text-md-on-secondary-container font-medium py-2 px-6 rounded-full transition-all duration-300 ease-md3;
+  }
+
+  .btn-outlined {
+    @apply bg-transparent border border-md-outline hover:bg-md-primary/5 active:scale-95 text-md-primary font-medium py-2 px-6 rounded-full transition-all duration-300 ease-md3;
   }
 }
 
-/* Beat flash animation */
 @keyframes beatFlash {
-  0% { opacity: 1; transform: scale(1.08); box-shadow: 0 0 30px rgba(236,19,19,0.6); }
+  0% { opacity: 1; transform: scale(1.08); box-shadow: 0 0 30px rgba(103,80,164,0.4); }
   100% { opacity: 0.85; transform: scale(1); box-shadow: none; }
 }
 
@@ -65,7 +67,7 @@ body {
   animation: beatFlash 0.15s ease-out forwards;
 }
 
-/* Range input styling */
+/* MD3 filled text field style for range inputs */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
@@ -78,21 +80,28 @@ input[type="range"] {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: white;
-  border: 2px solid #ec1313;
+  background: #6750A4;
+  border: none;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: white;
-  border: 2px solid #ec1313;
+  background: #6750A4;
+  border: none;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

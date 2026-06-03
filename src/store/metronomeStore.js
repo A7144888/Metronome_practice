@@ -120,6 +120,27 @@ const RECENT_LIMIT = 10
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Deep clone the rhythm tree so that the copy stored on a preset and the
+ * copy held by the editor do not alias each other (a stale alias would let
+ * editor mutations leak back into the saved preset, or vice versa).
+ */
+const cloneMeasures = (measures) => JSON.parse(JSON.stringify(measures))
+
+/**
+ * Derive a small bar-height array from the first measure's beat accents so
+ * the PresetCard preview thumbnail stays in sync with the saved rhythm.
+ */
+const ACCENT_PREVIEW_HEIGHT = { strong: 1.0, medium: 0.7, normal: 0.5, none: 0.2 }
+const buildPreview = (measures) => {
+  const first = measures[0]
+  if (!first) return [0.5]
+  return first.beats.map((b) => {
+    const sd = b.subdivisions[0]
+    return sd ? (ACCENT_PREVIEW_HEIGHT[sd.accent] ?? 0.5) : 0.3
+  })
+}
+
 /** Map over a single subdivision by id within nested measure→beat structure */
 function mapSubdiv(measures, measureId, beatId, subdivId, fn) {
   return measures.map((m) =>
@@ -366,23 +387,80 @@ export const useMetronomeStore = create((set, get) => ({
 
   // ── Presets ────────────────────────────────────────────────────────────────
 
-  loadPreset: (presetId) => {
+  loadPreset: (presetId, opts = {}) => {
     const preset = get().presets.find((p) => p.id === presetId)
     if (!preset) return
     const { beats, noteValue } = preset.timeSignature
     set((s) => {
       // Bump this preset to the front of the recent list, capped at RECENT_LIMIT
       const nextRecent = [presetId, ...s.recentPresetIds.filter((id) => id !== presetId)].slice(0, RECENT_LIMIT)
+      // Restore the saved rhythm if the preset has one (newly-saved presets do);
+      // legacy / default presets without `measures` fall back to a fresh default bar.
+      const measures = preset.measures
+        ? cloneMeasures(preset.measures)
+        : [defaultMeasure(beats, noteValue)]
       return {
         bpm:            preset.bpm,
         timeSignature:  preset.timeSignature,
-        measures:       [defaultMeasure(beats, noteValue)],
+        measures,
         soundSet:       preset.soundSet,
         activePresetId: presetId,
         recentPresetIds: nextRecent,
-        view:           'editor',
+        view:           opts.view ?? 'editor',
       }
     })
+  },
+
+  deletePreset: (presetId) => {
+    set((s) => ({
+      presets:         s.presets.filter((p) => p.id !== presetId),
+      recentPresetIds: s.recentPresetIds.filter((id) => id !== presetId),
+      activePresetId:  s.activePresetId === presetId ? null : s.activePresetId,
+    }))
+  },
+
+  /**
+   * Reset the editor to a clean default state and clear `activePresetId`.
+   * Used by "New Preset" so the user starts from a blank 4/4 metronome
+   * instead of inheriting whatever rhythm was last loaded/edited.
+   */
+  newPreset: () => {
+    set({
+      bpm:            120,
+      timeSignature:  { beats: 4, noteValue: 4 },
+      measures:       [defaultMeasure(4, 4)],
+      soundSet:       'woodblock',
+      masterVolume:   0.8,
+      accentVolumes:  { strong: 1.0, medium: 0.65, normal: 0.4 },
+      activePresetId: null,
+    })
+  },
+
+  /**
+   * Persist the current editor state back onto the preset identified by
+   * `activePresetId`, overwriting bpm / time-sig / measures / sound set /
+   * tag / preview. Returns true on success.
+   */
+  updateActivePreset: () => {
+    const s = get()
+    if (!s.activePresetId) return false
+    if (!s.presets.some((p) => p.id === s.activePresetId)) return false
+    set((st) => ({
+      presets: st.presets.map((p) =>
+        p.id !== st.activePresetId
+          ? p
+          : {
+              ...p,
+              bpm:           st.bpm,
+              timeSignature: { ...st.timeSignature },
+              measures:      cloneMeasures(st.measures),
+              soundSet:      st.soundSet,
+              tag:           `${st.timeSignature.beats}/${st.timeSignature.noteValue}`,
+              rhythmPreview: buildPreview(st.measures),
+            }
+      ),
+    }))
+    return true
   },
 
   toggleFavorite: (presetId) => {
@@ -400,12 +478,18 @@ export const useMetronomeStore = create((set, get) => ({
       name,
       bpm:           s.bpm,
       timeSignature: { ...s.timeSignature },
+      measures:      cloneMeasures(s.measures),
       soundSet:      s.soundSet,
       favorited:     false,
       tag:           `${s.timeSignature.beats}/${s.timeSignature.noteValue}`,
-      rhythmPreview: Array.from({ length: s.timeSignature.beats }, () => Math.random() * 0.6 + 0.4),
+      rhythmPreview: buildPreview(s.measures),
     }
-    set((st) => ({ presets: [...st.presets, newPreset] }))
+    // Mark the freshly-saved preset as active so a subsequent Save updates it
+    // in place instead of spawning yet another duplicate.
+    set((st) => ({
+      presets:        [...st.presets, newPreset],
+      activePresetId: newPreset.id,
+    }))
   },
 
   setSearchQuery:      (searchQuery)      => set({ searchQuery }),

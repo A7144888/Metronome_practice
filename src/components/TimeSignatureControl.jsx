@@ -20,7 +20,7 @@ export default function TimeSignatureControl() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+      <h3 className="text-xs font-medium uppercase tracking-widest text-md-on-surface-variant">
         Time Signature
       </h3>
 
@@ -29,10 +29,10 @@ export default function TimeSignatureControl() {
           <button
             key={p.label}
             onClick={() => setTimeSignature(p.beats, p.noteValue)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ease-md3 active:scale-95 ${
               isPresetActive(p)
-                ? 'bg-primary text-white shadow-md shadow-primary/20'
-                : 'bg-slate-100 dark:bg-primary/5 hover:bg-primary/10 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-primary/10'
+                ? 'bg-md-primary text-white shadow-md3-2'
+                : 'bg-md-surface-low hover:bg-md-primary/10 text-md-on-surface-variant'
             }`}
           >
             {p.label}
@@ -42,33 +42,33 @@ export default function TimeSignatureControl() {
 
       <div className="flex items-center gap-4 mt-1">
         <div className="flex flex-col items-center gap-1 flex-1">
-          <label className="text-[10px] uppercase tracking-widest text-slate-500">Beats</label>
+          <label className="text-[10px] uppercase tracking-widest text-md-on-surface-variant/70">Beats</label>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setTimeSignature(Math.max(1, beats - 1), noteValue)}
-              className="w-7 h-7 rounded flex items-center justify-center bg-primary/10 hover:bg-primary/20 text-primary font-bold"
+              className="w-7 h-7 rounded-full flex items-center justify-center bg-md-secondary-container hover:bg-md-secondary-container/80 text-md-primary font-medium active:scale-95 transition-all duration-300 ease-md3"
             >−</button>
-            <span className="text-3xl font-bold w-8 text-center">{beats}</span>
+            <span className="text-3xl font-medium w-8 text-center text-md-fg">{beats}</span>
             <button
               onClick={() => setTimeSignature(Math.min(MAX_BEATS, beats + 1), noteValue)}
-              className="w-7 h-7 rounded flex items-center justify-center bg-primary/10 hover:bg-primary/20 text-primary font-bold"
+              className="w-7 h-7 rounded-full flex items-center justify-center bg-md-secondary-container hover:bg-md-secondary-container/80 text-md-primary font-medium active:scale-95 transition-all duration-300 ease-md3"
             >+</button>
           </div>
         </div>
 
-        <div className="text-3xl font-light text-slate-400">/</div>
+        <div className="text-3xl font-light text-md-outline">/</div>
 
         <div className="flex flex-col items-center gap-1 flex-1">
-          <label className="text-[10px] uppercase tracking-widest text-slate-500">Note Value</label>
+          <label className="text-[10px] uppercase tracking-widest text-md-on-surface-variant/70">Note Value</label>
           <div className="flex gap-1 flex-wrap justify-center">
             {NOTE_VALUES.map((nv) => (
               <button
                 key={nv}
                 onClick={() => setTimeSignature(beats, nv)}
-                className={`w-8 h-8 rounded text-xs font-bold transition-colors ${
+                className={`w-8 h-8 rounded-full text-xs font-medium transition-all duration-300 ease-md3 active:scale-95 ${
                   noteValue === nv
-                    ? 'bg-primary text-white'
-                    : 'bg-slate-100 dark:bg-primary/5 hover:bg-primary/10 text-slate-600 dark:text-slate-400'
+                    ? 'bg-md-primary text-white'
+                    : 'bg-md-surface-low hover:bg-md-primary/10 text-md-on-surface-variant'
                 }`}
               >
                 {nv}
