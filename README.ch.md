@@ -20,7 +20,7 @@ https://metronome-practice.vercel.app/
 
 ## 功能特色
 
-### 三大檢視模式
+### 三大檢視模式(以電腦端為例)
 
 **預設庫 (Presets)**
 <img width="1809" height="912" alt="螢幕擷取畫面 2026-06-04 215812" src="https://github.com/user-attachments/assets/3a7cf279-ebe3-4060-96fe-d3acfd6f45dd" />
