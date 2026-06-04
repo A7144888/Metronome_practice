@@ -1,10 +1,9 @@
-# Pro Metronome — 節拍可編輯的節拍器
-
+# Pro Metronome — 節拍可編輯的節拍器(適配移動端)
 https://metronome-practice.vercel.app/
 
 [English README](README.en.md)
 ### 憑藉自身興趣以及吉他練習需求做的，還有很多不足之處請包涵
-**(介面暫時不適配移動端)**
+
 
 一款基於瀏覽器，提供預設庫、節奏編輯器與極簡演出模式。全部邏輯於前端運行，無需後端伺服器。
 
