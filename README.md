@@ -1,12 +1,12 @@
-# Pro Metronome — Editable Rhythm Metronome
+# Pro Metronome — Editable Rhythm Metronome(optimized for mobile.)
 
 https://metronome-practice.vercel.app/
 
-[中文說明](README.md)
+[中文說明](README.ch.md)
 
 Built out of personal interest and guitar practice needs. There’s still plenty of room to improve — thanks for your patience.
 
-**(The UI is not fully optimized for mobile yet.)**
+
 
 A browser-based metronome with a preset library, rhythm editor, and minimal performance mode. All logic runs on the frontend — no backend required.
 
@@ -191,11 +191,11 @@ measures: [
 
 ## Roadmap
 
-1. Account login and cloud persistence (backend + database)
-2. Drum machine and more click sounds
-3. More rhythm templates
-4. Custom UI theming
-5. Multiple measures with ties across bar lines
+1. **Account login and cloud persistence (backend + database)**
+2.**Drum machine and more click sounds**
+3. **More rhythm templates**
+4. **Custom UI theming**
+5. **Multiple measures with ties across bar lines**
 
 ## Caveats
 
