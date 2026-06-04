@@ -20,6 +20,9 @@
 ### 三大檢視模式
 
 **預設庫 (Presets)**
+<img width="1809" height="912" alt="螢幕擷取畫面 2026-06-04 215812" src="https://github.com/user-attachments/assets/3a7cf279-ebe3-4060-96fe-d3acfd6f45dd" />
+
+
 - 內建經典節奏預設（標準 4/4、複合 6/8 等）
 - 自訂節奏的儲存、收藏與刪除
 - 依名稱或標籤搜尋，依拍號篩選
@@ -27,23 +30,28 @@
 - 底部狀態列顯示當前 BPM、拍號、經過時間與小節數
 
 **編輯器 (Editor)**
+ <img width="1812" height="912" alt="image" src="https://github.com/user-attachments/assets/742deec8-72ff-4ae8-b29b-7f1ecd468675" />
 - BPM 控制：範圍 20–300，支援滑桿、按鈕微調與直接輸入，並顯示速度名稱（Largo、Andante、Allegro、Presto 等）
 - Tap Tempo：透過連續點擊自動計算 BPM
 - 拍號設定：內建常用拍號（4/4、3/4、6/8、5/4、7/8、2/4）及自訂拍號
 - 節奏編輯：以小節 → 拍 → 細分音符的階層結構編輯節奏型態
-- 兩種編輯模式：
-  - **Grid 模式**：比例式時間軸，點擊切換重音等級，搭配混音面板
-  - **Beats 模式**：逐拍編輯細分音符，提供容量條與溢出警告
+- 兩個tab：
+  - **Beats**：比例式時間軸，可點擊切換重音等級、小節內編輯細分音符，提供容量條與溢出警告
+  - **Mixer**：混音面板
 - 重音系統：強 / 中 / 普通 / 靜音四級重音
 - 支援附點音符與連結線（Tie）
 - 播放限制：所有拍的細分音符必須恰好填滿，才能開始播放（防止節拍漂移）
-- 匯出 JSON 檔案以保存節奏型態
+- 匯出 .json以保存節奏型態，且可匯入從這網站匯出的.json
+ 
+
 
 **演出模式 (Performance)**
+<img width="1786" height="922" alt="image" src="https://github.com/user-attachments/assets/3f63b16e-d3d1-4594-8dae-eb2902d97dd4" />
+
 - 極簡舞台介面，大字顯示 BPM
 - 圓形節拍器 UI，顯示細分音符點與分數標記
 - 點擊圓形區域即可播放/暫停
-- 底部顯示拍號、小節數與計時器
+- 底部顯示Sequence Grid
 
 ### 音訊引擎
 
