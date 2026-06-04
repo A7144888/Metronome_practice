@@ -1,5 +1,8 @@
 # Pro Metronome — 節拍可編輯的節拍器
+
 https://metronome-practice.vercel.app/
+
+[English README](README.en.md)
 ### 憑藉自身興趣以及吉他練習需求做的，還有很多不足之處請包涵
 **(介面暫時不適配移動端)**
 
@@ -36,9 +39,9 @@ https://metronome-practice.vercel.app/
 - Tap Tempo：透過連續點擊自動計算 BPM
 - 拍號設定：內建常用拍號（4/4、3/4、6/8、5/4、7/8、2/4）及自訂拍號
 - 節奏編輯：以小節 → 拍 → 細分音符的階層結構編輯節奏型態
-- 兩個tab：
-  - **Beats**：比例式時間軸，可點擊切換重音等級、小節內編輯細分音符，提供容量條與溢出警告
-  - **Mixer**：混音面板
+- 兩個分頁：
+  - **Beat**：比例式時間軸（`SequenceGrid`）與逐拍細分編輯，含容量條與溢出警告
+  - **Mixer**：主音量、重音音量與音色
 - 重音系統：強 / 中 / 普通 / 靜音四級重音
 - 支援附點音符與連結線（Tie）
 - 播放限制：所有拍的細分音符必須恰好填滿，才能開始播放（防止節拍漂移）
@@ -104,35 +107,54 @@ npm run dev
 ## 專案結構
 
 ```
-src/
-├── main.jsx                  # React 根節點
-├── App.jsx                   # 檢視切換（presets / editor / performance）
-├── App.css                   # 應用級樣式
-├── index.css                 # Tailwind + MD3 元件樣式
-├── engine/
-│   ├── musicTheory.js        # Tick 計算、驗證、播放條目生成
-│   └── audioEngine.js        # Web Audio 單例排程器
-├── hooks/
-│   ├── useMetronome.js       # 播放/暫停/停止 傳輸控制
-│   └── useTapTempo.js        # Tap Tempo BPM 計算
-├── store/
-│   └── metronomeStore.js     # Zustand 集中狀態管理
-├── pages/
-│   ├── PresetsPage.jsx       # 預設庫頁面
-│   ├── EditorPage.jsx        # 節奏編輯器頁面
-│   └── PerformancePage.jsx   # 演出模式頁面
-└── components/
-    ├── LibraryMenu.jsx       # 預設庫導覽選單
-    ├── BpmControl.jsx        # BPM 控制元件 + Tap Tempo
-    ├── TimeSignatureControl.jsx  # 拍號設定元件
-    ├── SubdivisionEditor.jsx # 逐拍細分音符編輯器
-    ├── SequenceGrid.jsx      # 比例式時間軸格線
-    ├── MixerPanel.jsx        # 混音面板（音量、音色）
-    ├── PlaybackControls.jsx  # 播放控制按鈕與統計
-    ├── BeatIndicator.jsx     # 拍號指示燈
-    ├── PresetCard.jsx        # 預設卡片元件
-    └── Icon.jsx              # Material Symbols 圖示封裝
+Metronome_practice/
+├── public/                       # 靜態資源（Vite 原樣輸出）
+│   ├── favicon.svg
+│   └── icons.svg                 # Material Symbols 圖示集
+├── src/
+│   ├── main.jsx                  # React 進入點
+│   ├── App.jsx                   # 依 store.view 切換三種檢視
+│   ├── App.css                   # 應用級樣式
+│   ├── index.css                 # Tailwind + MD3 元件樣式
+│   ├── assets/                   # 圖片等前端資源
+│   ├── engine/                   # 節奏理論與音訊（與 UI 無關）
+│   │   ├── musicTheory.js        # Tick 計算、容量驗證、播放條目生成
+│   │   └── audioEngine.js        # Web Audio 單例前瞻排程器
+│   ├── hooks/
+│   │   ├── useMetronome.js       # 播放 / 暫停 / 停止傳輸控制
+│   │   ├── useTapTempo.js        # Tap Tempo BPM 計算
+│   │   └── useMediaQuery.js      # 響應式媒體查詢（斷點偵測）
+│   ├── store/
+│   │   └── metronomeStore.js     # Zustand 單一狀態來源（節奏、播放、預設庫）
+│   ├── pages/
+│   │   ├── PresetsPage.jsx       # 預設庫
+│   │   ├── EditorPage.jsx        # 節奏編輯器（桌面 / 行動版版面）
+│   │   └── PerformancePage.jsx   # 演出模式
+│   └── components/
+│       ├── LibraryMenu.jsx       # 側邊導覽（Presets / Editor / Performance）
+│       ├── BpmControl.jsx        # BPM 滑桿、按鈕微調、Tap Tempo
+│       ├── TimeSignatureControl.jsx
+│       ├── SequenceGrid.jsx      # 比例式時間軸（Beat 分頁）
+│       ├── SubdivisionEditor.jsx # 逐拍細分音符編輯
+│       ├── MixerPanel.jsx        # 音量與音色（Mixer 分頁）
+│       ├── PlaybackControls.jsx  # 播放 / 暫停 / 停止與統計
+│       ├── BeatIndicator.jsx     # 當前拍指示
+│       ├── PresetCard.jsx        # 預設卡片
+│       └── Icon.jsx              # Material Symbols 封裝
+├── index.html                    # HTML 殼層
+├── vite.config.js
+├── tailwind.config.js
+├── postcss.config.js
+├── eslint.config.js
+├── package.json
+└── PROJECT_CONTEXT.md            # 開發者交接說明（非執行時依賴）
 ```
+
+**架構說明**
+
+- **無路由套件**：檢視由 `metronomeStore` 的 `view` 欄位（`presets` | `editor` | `performance`）驅動，`App.jsx` 依值渲染對應頁面。
+- **狀態與音訊分離**：UI 與預設庫邏輯在 `store/`；節拍數學在 `engine/musicTheory.js`；實際發聲在 `engine/audioEngine.js`。
+- **三頁共用導覽**：`LibraryMenu` 出現在 Presets、Editor、Performance，負責切換檢視與全域導覽。
 
 ## 資料模型
 
