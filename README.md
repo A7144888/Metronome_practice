@@ -21,7 +21,7 @@ A browser-based metronome with a preset library, rhythm editor, and minimal perf
 | Audio | Web Audio API |
 | Design | Material Design 3 |
 
-## Features
+## Features(Desktop for example)
 
 ### Three Views
 
