@@ -58,6 +58,11 @@ body {
   }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
 @keyframes beatFlash {
   0% { opacity: 1; transform: scale(1.08); box-shadow: 0 0 30px rgba(103,80,164,0.4); }
   100% { opacity: 0.85; transform: scale(1); box-shadow: none; }

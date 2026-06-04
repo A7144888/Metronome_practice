@@ -1,6 +1,6 @@
 import { useMetronomeStore } from '../store/metronomeStore'
 import { useMetronome } from '../hooks/useMetronome'
-import { isBeatFull } from '../engine/musicTheory'
+import { isMeasureFull } from '../engine/musicTheory'
 import Icon from './Icon'
 
 function formatTime(secs) {
@@ -13,10 +13,10 @@ export default function PlaybackControls({ compact = false }) {
   const { isPlaying, elapsedTime, measureCount, timeSignature, measures } = useMetronomeStore()
   const { play, stop, pause } = useMetronome()
 
-  const allBeatsFull = measures.every((m) =>
-    m.beats.every((b) => isBeatFull(b, timeSignature.noteValue))
+  const allFull = measures.every((m) =>
+    isMeasureFull(m, timeSignature.beats, timeSignature.noteValue)
   )
-  const canPlay = isPlaying || allBeatsFull
+  const canPlay = isPlaying || allFull
 
   if (compact) {
     return (

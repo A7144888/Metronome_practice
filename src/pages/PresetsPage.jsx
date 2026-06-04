@@ -36,6 +36,7 @@ export default function PresetsPage() {
     selectedCategory,
     recentPresetIds,
     bpm, timeSignature, elapsedTime, measureCount,
+    activePresetId,
     setView, newPreset,
   } = useMetronomeStore()
 
@@ -88,7 +89,7 @@ export default function PresetsPage() {
       <div className="absolute bottom-0 -left-24 w-72 h-72 bg-md-tertiary/8 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
 
       {/* Header */}
-      <header className="h-20 border-b border-md-outline/15 flex items-center justify-between px-8 bg-md-bg/80 backdrop-blur-md shrink-0 relative z-10">
+      <header className="h-20 border-b border-md-outline/15 flex items-center justify-between px-8 bg-md-bg/80 backdrop-blur-md shrink-0 relative z-30">
         <div className="flex items-center gap-4">
           <LibraryMenu />
           <h2 className="hidden md:block text-2xl font-medium text-md-fg">{meta.title}</h2>
@@ -162,7 +163,13 @@ export default function PresetsPage() {
       {/* Grid */}
       <div className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-10">
         {filtered.length === 0 ? (
-          <EmptyState icon={meta.emptyIcon} title={meta.emptyTitle} body={meta.emptyBody} />
+          <EmptyState
+            icon={meta.emptyIcon}
+            title={meta.emptyTitle}
+            body={meta.emptyBody}
+            onAction={selectedCategory === 'my-rhythms' ? () => { newPreset(); setView('editor') } : undefined}
+            actionLabel={selectedCategory === 'my-rhythms' ? 'Create New Preset' : undefined}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filtered.map((preset) => (
@@ -187,44 +194,52 @@ export default function PresetsPage() {
       </div>
 
       {/* Mini Player Footer */}
-      <footer className="h-24 bg-md-surface border-t border-md-outline/15 flex items-center px-8 justify-between shadow-md3-2 shrink-0 relative z-10">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-md-primary-container rounded-lg flex items-center justify-center text-md-primary">
-            <Icon name="music_note" className="text-3xl" />
-          </div>
-          <div>
-            <h4 className="font-medium text-md-fg">Current Session</h4>
-            <p className="text-md-on-surface-variant text-sm">
-              {bpm} BPM • {timeSignature.beats}/{timeSignature.noteValue}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-8">
-          <div className="hidden sm:flex items-center gap-2 text-sm text-md-on-surface-variant">
-            <Icon name="timer" className="text-sm" />
-            <span>{formatTime(elapsedTime)}</span>
-            <span className="ml-2">Bar {measureCount}</span>
+      {activePresetId && presets.some((p) => p.id === activePresetId) ? (
+        <footer className="h-24 bg-md-surface border-t border-md-outline/15 flex items-center px-8 justify-between shadow-md3-2 shrink-0 relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-md-primary-container rounded-lg flex items-center justify-center text-md-primary">
+              <Icon name="music_note" className="text-3xl" />
+            </div>
+            <div>
+              <h4 className="font-medium text-md-fg">
+                {presets.find((p) => p.id === activePresetId)?.name ?? 'Current Session'}
+              </h4>
+              <p className="text-md-on-surface-variant text-sm">
+                {bpm} BPM • {timeSignature.beats}/{timeSignature.noteValue}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setView('performance')}
-              className="btn-tonal flex items-center gap-2 text-sm py-2 px-4"
-            >
-              <Icon name="layers" className="text-base" />
-              PERFORMANCE
-            </button>
-            <button
-              onClick={() => setView('editor')}
-              className="btn-primary flex items-center gap-2 text-sm py-2 px-4"
-            >
-              <Icon name="tune" className="text-base" />
-              EDITOR
-            </button>
+          <div className="flex items-center gap-8">
+            <div className="hidden sm:flex items-center gap-2 text-sm text-md-on-surface-variant">
+              <Icon name="timer" className="text-sm" />
+              <span>{formatTime(elapsedTime)}</span>
+              <span className="ml-2">Bar {measureCount}</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setView('performance')}
+                className="btn-tonal flex items-center gap-2 text-sm py-2 px-4"
+              >
+                <Icon name="layers" className="text-base" />
+                PERFORMANCE
+              </button>
+              <button
+                onClick={() => setView('editor')}
+                className="btn-primary flex items-center gap-2 text-sm py-2 px-4"
+              >
+                <Icon name="tune" className="text-base" />
+                EDITOR
+              </button>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      ) : (
+        <footer className="h-16 bg-md-surface border-t border-md-outline/15 flex items-center px-8 justify-center shrink-0 relative z-10">
+          <p className="text-sm text-md-on-surface-variant">No preset loaded</p>
+        </footer>
+      )}
     </div>
   )
 }
@@ -245,14 +260,31 @@ function FilterOption({ active, label, onClick }) {
   )
 }
 
-function EmptyState({ icon, title, body }) {
+function EmptyState({ icon, title, body, onAction, actionLabel }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-8 py-16">
-      <div className="w-16 h-16 rounded-full bg-md-secondary-container flex items-center justify-center mb-4 text-md-primary">
-        <Icon name={icon} className="text-3xl" />
-      </div>
+      <button
+        type="button"
+        onClick={onAction}
+        disabled={!onAction}
+        className={`w-20 h-20 rounded-full bg-md-secondary-container flex items-center justify-center mb-4 text-md-primary transition-all duration-300 ease-md3 ${
+          onAction ? 'cursor-pointer hover:scale-110 hover:bg-md-primary hover:text-white active:scale-95 shadow-md3-1 hover:shadow-md3-3' : ''
+        }`}
+      >
+        <Icon name={icon} className="text-4xl" />
+      </button>
       <h3 className="text-lg font-medium mb-1 text-md-fg">{title}</h3>
-      <p className="text-sm text-md-on-surface-variant max-w-xs">{body}</p>
+      <p className="text-sm text-md-on-surface-variant max-w-xs mb-4">{body}</p>
+      {onAction && actionLabel && (
+        <button
+          type="button"
+          onClick={onAction}
+          className="btn-primary flex items-center gap-2 text-sm py-2.5 px-6"
+        >
+          <Icon name="add" className="text-base" />
+          {actionLabel}
+        </button>
+      )}
     </div>
   )
 }

@@ -4,9 +4,11 @@ import {
   TICKS_PER_QUARTER,
   subdivDurationTicks,
   beatCapacityTicks,
-  beatUsedTicks,
-  isBeatFull,
+  measureCapacityTicks,
+  measureUsedTicks,
+  isMeasureFull,
   validateStructure,
+  hasBinaryTernaryConflict,
 } from '../engine/musicTheory'
 
 /**
@@ -27,7 +29,6 @@ export { NOTE_VALUES, TICKS_PER_QUARTER }
 
 export const ACCENT_TYPES = ['strong', 'medium', 'normal', 'none']
 
-// Default gain values per skill: audio-accent-engine
 export const ACCENT_GAIN = {
   strong: 1.0,
   medium: 0.65,
@@ -43,9 +44,8 @@ export const SOUND_SETS = [
 ]
 
 /**
- * Create a fresh subdivision with the full schema. The default note value
- * tracks the time-signature denominator so that one subdivision exactly
- * fills one beat (e.g. 'eighth' at 6/8, not 'quarter' which would overflow).
+ * Create a fresh subdivision. The default note value tracks the time-signature
+ * denominator so that one subdivision exactly fills one beat.
  */
 export const defaultSubdivision = (accent = 'normal', noteValue = 4) => ({
   id:     crypto.randomUUID(),
@@ -56,18 +56,14 @@ export const defaultSubdivision = (accent = 'normal', noteValue = 4) => ({
 })
 
 /**
- * Create a default beat.
- * carryOver: ticks arriving from a tie in the previous beat (skill: data-integrity-guard).
+ * Create a default measure with one subdivision per beat.
+ * Subdivisions are stored flat at the measure level — notes can span beats.
  */
-const defaultBeat = (beatIndex = 0, noteValue = 4) => ({
-  id:           crypto.randomUUID(),
-  subdivisions: [defaultSubdivision(beatIndex === 0 ? 'strong' : 'normal', noteValue)],
-  carryOver:    0,
-})
-
 export const defaultMeasure = (beats = 4, noteValue = 4) => ({
-  id:    crypto.randomUUID(),
-  beats: Array.from({ length: beats }, (_, i) => defaultBeat(i, noteValue)),
+  id:           crypto.randomUUID(),
+  subdivisions: Array.from({ length: beats }, (_, i) =>
+    defaultSubdivision(i === 0 ? 'strong' : 'normal', noteValue)
+  ),
 })
 
 export const DEFAULT_PRESETS = [
@@ -112,76 +108,80 @@ const createDefaultState = () => ({
   activePresetId:    null,
   searchQuery:       '',
   selectedCategory:  'my-rhythms',
-  recentPresetIds:   [],   // most-recent-first, capped (skill: data-integrity-guard)
-  filterTag:         'all', // 'all' | a time-sig tag like '4/4'
+  recentPresetIds:   [],
+  filterTag:         'all',
 })
 
 const RECENT_LIMIT = 10
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/**
- * Deep clone the rhythm tree so that the copy stored on a preset and the
- * copy held by the editor do not alias each other (a stale alias would let
- * editor mutations leak back into the saved preset, or vice versa).
- */
 const cloneMeasures = (measures) => JSON.parse(JSON.stringify(measures))
 
-/**
- * Derive a small bar-height array from the first measure's beat accents so
- * the PresetCard preview thumbnail stays in sync with the saved rhythm.
- */
 const ACCENT_PREVIEW_HEIGHT = { strong: 1.0, medium: 0.7, normal: 0.5, none: 0.2 }
-const buildPreview = (measures) => {
+
+/**
+ * Derive a small bar-height array (one bar per beat) from the first measure's
+ * subdivisions. Each beat's height is set by the first note starting in that beat.
+ */
+const buildPreview = (measures, timeSignature) => {
   const first = measures[0]
-  if (!first) return [0.5]
-  return first.beats.map((b) => {
-    const sd = b.subdivisions[0]
-    return sd ? (ACCENT_PREVIEW_HEIGHT[sd.accent] ?? 0.5) : 0.3
+  if (!first || !first.subdivisions?.length) return [0.5]
+
+  const beatCap = beatCapacityTicks(timeSignature.noteValue)
+  const bars    = []
+  let tickPos   = 0
+  let curBeat   = -1
+
+  first.subdivisions.forEach((sd) => {
+    const beatIdx = Math.floor(tickPos / beatCap)
+    if (beatIdx !== curBeat) {
+      bars.push(ACCENT_PREVIEW_HEIGHT[sd.accent] ?? 0.5)
+      curBeat = beatIdx
+    }
+    tickPos += subdivDurationTicks(sd)
   })
+
+  while (bars.length < timeSignature.beats) bars.push(0.3)
+  return bars
 }
 
-/** Map over a single subdivision by id within nested measure→beat structure */
-function mapSubdiv(measures, measureId, beatId, subdivId, fn) {
+/** Map over a single subdivision by id within the flat measure structure. */
+function mapSubdiv(measures, measureId, subdivId, fn) {
   return measures.map((m) =>
     m.id !== measureId
       ? m
-      : {
-          ...m,
-          beats: m.beats.map((b) =>
-            b.id !== beatId
-              ? b
-              : { ...b, subdivisions: b.subdivisions.map((sd) => (sd.id !== subdivId ? sd : fn(sd))) }
-          ),
-        }
+      : { ...m, subdivisions: m.subdivisions.map((sd) => (sd.id !== subdivId ? sd : fn(sd))) }
   )
 }
 
 /**
- * After removing a subdivision, clear the tie flag on the new last note
- * and sever any incoming tie from the preceding note.
- * Handles mid-chain deletion: if the removed note was a tie target,
- * the preceding note's tie is cleared; if it was a tie source, the next
- * note's incoming tie is implicitly removed (it becomes a new head).
+ * After removing a subdivision, clear the tie flag on the new last note.
  */
-function sanitizeTiesAfterRemoval(beats) {
-  return beats.map((beat) => {
-    const subs  = beat.subdivisions
-    const fixed = subs.map((sd, idx) => {
-      // The last note in the beat must never have a forward tie
-      if (sd.tie && idx === subs.length - 1) return { ...sd, tie: false }
-      return sd
-    })
-    return { ...beat, subdivisions: fixed }
+function sanitizeTiesAfterRemoval(subdivisions) {
+  return subdivisions.map((sd, idx) => {
+    if (sd.tie && idx === subdivisions.length - 1) return { ...sd, tie: false }
+    return sd
   })
 }
 
 /**
- * Run validateStructure and warn in dev if invariants are violated.
- * Returns the measures unchanged (the check is a safety net, not a blocker).
+ * Migrate measures from old beat-nested format to flat subdivisions format.
+ * Old: measure.beats[].subdivisions[]  →  New: measure.subdivisions[]
  */
-function assertValid(measures, noteValue) {
-  if (!validateStructure(measures, noteValue)) {
+function migrateMeasures(measures) {
+  if (!measures || measures.length === 0) return measures
+  if (measures[0].subdivisions && !measures[0].beats) return measures
+  return measures.map((m) => ({
+    id:           m.id ?? crypto.randomUUID(),
+    subdivisions: m.beats
+      ? m.beats.flatMap((b) => b.subdivisions ?? [])
+      : m.subdivisions ?? [],
+  }))
+}
+
+function assertValid(measures, beats, noteValue) {
+  if (!validateStructure(measures, beats, noteValue)) {
     if (process.env.NODE_ENV !== 'production') {
       console.warn('[metronomeStore] validateStructure failed — rhythm data may be inconsistent.')
     }
@@ -196,11 +196,6 @@ export const useMetronomeStore = create((set, get) => ({
 
   setBpm: (bpm) => set({ bpm: Math.min(300, Math.max(20, Number(bpm))) }),
 
-  /**
-   * Increment/decrement BPM using a functional update so that rapid clicks
-   * after a slider drag always see the latest value (avoids stale closures
-   * where the previous `bpm` from the component's last render is captured).
-   */
   adjustBpm: (delta) =>
     set((s) => ({ bpm: Math.min(300, Math.max(20, s.bpm + Number(delta))) })),
 
@@ -229,90 +224,75 @@ export const useMetronomeStore = create((set, get) => ({
 
   // ── Subdivision CRUD ────────────────────────────────────────────────────────
 
-  addSubdivision: (measureId, beatId) => {
+  addSubdivision: (measureId) => {
     set((s) => {
       const measure = s.measures.find((m) => m.id === measureId)
-      const beat    = measure?.beats.find((b) => b.id === beatId)
-      if (!beat) return {}
+      if (!measure) return {}
 
-      const cap       = beatCapacityTicks(s.timeSignature.noteValue)
-      const used      = beatUsedTicks(beat.subdivisions)
-      const carryOver = beat.carryOver ?? 0
-      const remaining = cap - used - carryOver
+      const { beats, noteValue } = s.timeSignature
+      const cap       = measureCapacityTicks(beats, noteValue)
+      const used      = measureUsedTicks(measure.subdivisions)
+      const remaining = cap - used
       if (remaining <= 0) return {}
 
-      // Pick the largest note value that fits
-      const candidates = NOTE_VALUES.filter((nv) =>
-        subdivDurationTicks({ value: nv, dotted: false }) <= remaining
-      )
-      const bestValue = candidates.length > 0 ? candidates[0] : 'sixteenth'
+      const candidates = NOTE_VALUES.filter((nv) => {
+        if (hasBinaryTernaryConflict(measure.subdivisions, nv)) return false
+        return subdivDurationTicks({ value: nv, dotted: false }) <= remaining
+      })
+      if (candidates.length === 0) return {}
+      const bestValue = candidates[0]
       const newSd     = { ...defaultSubdivision('normal'), value: bestValue }
 
       const newMeasures = s.measures.map((m) =>
         m.id !== measureId
           ? m
-          : {
-              ...m,
-              beats: m.beats.map((b) =>
-                b.id !== beatId
-                  ? b
-                  : { ...b, subdivisions: [...b.subdivisions, newSd] }
-              ),
-            }
+          : { ...m, subdivisions: [...m.subdivisions, newSd] }
       )
 
-      assertValid(newMeasures, s.timeSignature.noteValue)
+      assertValid(newMeasures, beats, noteValue)
       return { measures: newMeasures }
     })
   },
 
-  removeSubdivision: (measureId, beatId, subdivId) => {
+  removeSubdivision: (measureId, subdivId) => {
     set((s) => {
       const newMeasures = s.measures.map((m) =>
         m.id !== measureId
           ? m
-          : {
-              ...m,
-              beats: sanitizeTiesAfterRemoval(
-                m.beats.map((b) =>
-                  b.id !== beatId
-                    ? b
-                    : { ...b, subdivisions: b.subdivisions.filter((sd) => sd.id !== subdivId) }
-                )
-              ),
-            }
+          : { ...m, subdivisions: sanitizeTiesAfterRemoval(m.subdivisions.filter((sd) => sd.id !== subdivId)) }
       )
 
-      assertValid(newMeasures, s.timeSignature.noteValue)
+      assertValid(newMeasures, s.timeSignature.beats, s.timeSignature.noteValue)
       return { measures: newMeasures }
     })
   },
 
-  updateSubdivision: (measureId, beatId, subdivId, updates) => {
+  updateSubdivision: (measureId, subdivId, updates) => {
     set((s) => ({
-      measures: mapSubdiv(s.measures, measureId, beatId, subdivId, (sd) => ({ ...sd, ...updates })),
+      measures: mapSubdiv(s.measures, measureId, subdivId, (sd) => ({ ...sd, ...updates })),
     }))
   },
 
   // ── Dotted toggle ──────────────────────────────────────────────────────────
 
-  toggleDotted: (measureId, beatId, subdivId) => {
+  toggleDotted: (measureId, subdivId) => {
     set((s) => {
       const measure = s.measures.find((m) => m.id === measureId)
-      const beat    = measure?.beats.find((b) => b.id === beatId)
-      const sd      = beat?.subdivisions.find((x) => x.id === subdivId)
+      const sd      = measure?.subdivisions.find((x) => x.id === subdivId)
       if (!sd) return {}
+
+      if (sd.value === 'triplet') return {}
 
       const wouldBeDotted = !sd.dotted
       const newTicks      = subdivDurationTicks({ value: sd.value, dotted: wouldBeDotted })
-      const otherTicks    = beatUsedTicks(beat.subdivisions.filter((x) => x.id !== subdivId))
-      const cap           = beatCapacityTicks(s.timeSignature.noteValue)
-      const carryOver     = beat.carryOver ?? 0
+      const otherTicks    = measureUsedTicks(measure.subdivisions.filter((x) => x.id !== subdivId))
+      const { beats, noteValue } = s.timeSignature
+      const cap           = measureCapacityTicks(beats, noteValue)
 
-      if (wouldBeDotted && otherTicks + newTicks + carryOver > cap) return {}
+      if (wouldBeDotted && otherTicks + newTicks > cap) return {}
 
       return {
-        measures: mapSubdiv(s.measures, measureId, beatId, subdivId, (x) => ({
+        measures: mapSubdiv(s.measures, measureId, subdivId, (x) => ({
           ...x,
           dotted: wouldBeDotted,
         })),
@@ -322,19 +302,17 @@ export const useMetronomeStore = create((set, get) => ({
 
   // ── Tie toggle ─────────────────────────────────────────────────────────────
 
-  toggleTie: (measureId, beatId, subdivId) => {
+  toggleTie: (measureId, subdivId) => {
     set((s) => {
       const measure = s.measures.find((m) => m.id === measureId)
-      const beat    = measure?.beats.find((b) => b.id === beatId)
-      if (!beat) return {}
+      if (!measure) return {}
 
-      const subs = beat.subdivisions
+      const subs = measure.subdivisions
       const idx  = subs.findIndex((x) => x.id === subdivId)
-      // Tie requires a next note in the same beat
       if (idx === -1 || idx === subs.length - 1) return {}
 
       return {
-        measures: mapSubdiv(s.measures, measureId, beatId, subdivId, (sd) => ({
+        measures: mapSubdiv(s.measures, measureId, subdivId, (sd) => ({
           ...sd,
           tie: !sd.tie,
         })),
@@ -342,30 +320,33 @@ export const useMetronomeStore = create((set, get) => ({
     })
   },
 
-  setSubdivisionAccent: (measureId, beatId, subdivId, accent) => {
-    get().updateSubdivision(measureId, beatId, subdivId, { accent })
+  setSubdivisionAccent: (measureId, subdivId, accent) => {
+    get().updateSubdivision(measureId, subdivId, { accent })
   },
 
   // ── Note value change (overflow-safe) ─────────────────────────────────────
 
-  setSubdivisionValue: (measureId, beatId, subdivId, value) => {
+  setSubdivisionValue: (measureId, subdivId, value) => {
     set((s) => {
       const measure = s.measures.find((m) => m.id === measureId)
-      const beat    = measure?.beats.find((b) => b.id === beatId)
-      const sd      = beat?.subdivisions.find((x) => x.id === subdivId)
+      const sd      = measure?.subdivisions.find((x) => x.id === subdivId)
       if (!sd) return {}
 
-      const otherTicks = beatUsedTicks(beat.subdivisions.filter((x) => x.id !== subdivId))
-      const newTicks   = subdivDurationTicks({ value, dotted: sd.dotted })
-      const cap        = beatCapacityTicks(s.timeSignature.noteValue)
-      const carryOver  = beat.carryOver ?? 0
+      const otherSubs = measure.subdivisions.filter((x) => x.id !== subdivId)
+      if (hasBinaryTernaryConflict(otherSubs, value)) return {}
 
       let dotted = sd.dotted
-      if (otherTicks + newTicks + carryOver > cap) {
+      if (value === 'triplet') dotted = false
+
+      const otherTicks = measureUsedTicks(otherSubs)
+      const newTicks   = subdivDurationTicks({ value, dotted })
+      const { beats, noteValue } = s.timeSignature
+      const cap        = measureCapacityTicks(beats, noteValue)
+
+      if (otherTicks + newTicks > cap) {
         if (dotted) {
-          // Try removing the dot
           const undottedTicks = subdivDurationTicks({ value, dotted: false })
-          if (otherTicks + undottedTicks + carryOver <= cap) {
+          if (otherTicks + undottedTicks <= cap) {
             dotted = false
           } else {
             return {}
@@ -376,7 +357,7 @@ export const useMetronomeStore = create((set, get) => ({
       }
 
       return {
-        measures: mapSubdiv(s.measures, measureId, beatId, subdivId, (x) => ({
+        measures: mapSubdiv(s.measures, measureId, subdivId, (x) => ({
           ...x,
           value,
           dotted,
@@ -392,12 +373,9 @@ export const useMetronomeStore = create((set, get) => ({
     if (!preset) return
     const { beats, noteValue } = preset.timeSignature
     set((s) => {
-      // Bump this preset to the front of the recent list, capped at RECENT_LIMIT
       const nextRecent = [presetId, ...s.recentPresetIds.filter((id) => id !== presetId)].slice(0, RECENT_LIMIT)
-      // Restore the saved rhythm if the preset has one (newly-saved presets do);
-      // legacy / default presets without `measures` fall back to a fresh default bar.
       const measures = preset.measures
-        ? cloneMeasures(preset.measures)
+        ? migrateMeasures(cloneMeasures(preset.measures))
         : [defaultMeasure(beats, noteValue)]
       return {
         bpm:            preset.bpm,
@@ -419,11 +397,15 @@ export const useMetronomeStore = create((set, get) => ({
     }))
   },
 
-  /**
-   * Reset the editor to a clean default state and clear `activePresetId`.
-   * Used by "New Preset" so the user starts from a blank 4/4 metronome
-   * instead of inheriting whatever rhythm was last loaded/edited.
-   */
+  renamePreset: (presetId, newName) => {
+    if (!newName?.trim()) return
+    set((s) => ({
+      presets: s.presets.map((p) =>
+        p.id === presetId ? { ...p, name: newName.trim() } : p
+      ),
+    }))
+  },
+
   newPreset: () => {
     set({
       bpm:            120,
@@ -436,11 +418,6 @@ export const useMetronomeStore = create((set, get) => ({
     })
   },
 
-  /**
-   * Persist the current editor state back onto the preset identified by
-   * `activePresetId`, overwriting bpm / time-sig / measures / sound set /
-   * tag / preview. Returns true on success.
-   */
   updateActivePreset: () => {
     const s = get()
     if (!s.activePresetId) return false
@@ -456,7 +433,7 @@ export const useMetronomeStore = create((set, get) => ({
               measures:      cloneMeasures(st.measures),
               soundSet:      st.soundSet,
               tag:           `${st.timeSignature.beats}/${st.timeSignature.noteValue}`,
-              rhythmPreview: buildPreview(st.measures),
+              rhythmPreview: buildPreview(st.measures, st.timeSignature),
             }
       ),
     }))
@@ -482,10 +459,8 @@ export const useMetronomeStore = create((set, get) => ({
       soundSet:      s.soundSet,
       favorited:     false,
       tag:           `${s.timeSignature.beats}/${s.timeSignature.noteValue}`,
-      rhythmPreview: buildPreview(s.measures),
+      rhythmPreview: buildPreview(s.measures, s.timeSignature),
     }
-    // Mark the freshly-saved preset as active so a subsequent Save updates it
-    // in place instead of spawning yet another duplicate.
     set((st) => ({
       presets:        [...st.presets, newPreset],
       activePresetId: newPreset.id,
@@ -497,14 +472,13 @@ export const useMetronomeStore = create((set, get) => ({
   setFilterTag:        (filterTag)        => set({ filterTag }),
 
   /**
-   * True only when every beat is *exactly* full (used + carryOver === capacity).
-   * The editor uses this to gate play: partial beats would schedule a click
-   * shorter than one beat and drift against the tempo, so we block playback
-   * until the user closes every gap / removes every overflow.
+   * True only when every measure is exactly full.
+   * The editor uses this to gate play: partial measures would schedule clicks
+   * that drift against the tempo, so we block playback until every gap is closed.
    */
-  allBeatsFull: () => {
+  allMeasuresFull: () => {
     const { measures, timeSignature } = get()
-    return measures.every((m) => m.beats.every((b) => isBeatFull(b, timeSignature.noteValue)))
+    return measures.every((m) => isMeasureFull(m, timeSignature.beats, timeSignature.noteValue))
   },
 
   exportJson: () => {
@@ -514,5 +488,57 @@ export const useMetronomeStore = create((set, get) => ({
       null,
       2
     )
+  },
+
+  importJson: (jsonString) => {
+    let data
+    try {
+      data = JSON.parse(jsonString)
+    } catch {
+      return { ok: false, error: 'Invalid JSON format.' }
+    }
+
+    if (!data || typeof data !== 'object') {
+      return { ok: false, error: 'File does not contain a valid object.' }
+    }
+
+    const { bpm, timeSignature, measures, soundSet } = data
+
+    if (typeof bpm !== 'number' || bpm < 20 || bpm > 300) {
+      return { ok: false, error: 'Invalid or missing BPM (must be 20–300).' }
+    }
+
+    if (
+      !timeSignature ||
+      typeof timeSignature.beats !== 'number' || timeSignature.beats < 1 ||
+      typeof timeSignature.noteValue !== 'number' || ![1,2,4,8,16,32].includes(timeSignature.noteValue)
+    ) {
+      return { ok: false, error: 'Invalid or missing time signature.' }
+    }
+
+    if (!Array.isArray(measures) || measures.length === 0) {
+      return { ok: false, error: 'Invalid or missing measures array.' }
+    }
+
+    const migrated = migrateMeasures(cloneMeasures(measures))
+
+    for (let mi = 0; mi < migrated.length; mi++) {
+      const m = migrated[mi]
+      if (!m || !Array.isArray(m.subdivisions)) {
+        return { ok: false, error: `Measure ${mi + 1} has no subdivisions.` }
+      }
+    }
+
+    const validSoundSet = soundSet && typeof soundSet === 'string' ? soundSet : 'woodblock'
+
+    set({
+      bpm,
+      timeSignature: { beats: timeSignature.beats, noteValue: timeSignature.noteValue },
+      measures: migrated,
+      soundSet: validSoundSet,
+      activePresetId: null,
+    })
+
+    return { ok: true }
   },
 }))

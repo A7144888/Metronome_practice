@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useMetronomeStore } from '../store/metronomeStore'
 import { useMetronome } from '../hooks/useMetronome'
 import {
-  isBeatFull,
+  isMeasureFull,
   beatCapacityTicks,
   subdivDurationTicks,
   BASE_DURATIONS_TICKS,
@@ -60,10 +60,10 @@ export default function PerformancePage() {
   } = useMetronomeStore()
   const { play, stop, pause } = useMetronome()
 
-  const allBeatsFull = measures.every((m) =>
-    m.beats.every((b) => isBeatFull(b, timeSignature.noteValue))
+  const allFull = measures.every((m) =>
+    isMeasureFull(m, timeSignature.beats, timeSignature.noteValue)
   )
-  const canPlay = isPlaying || allBeatsFull
+  const canPlay = isPlaying || allFull
 
   const dots = useMemo(() => {
     const beatTicks = beatCapacityTicks(timeSignature.noteValue)
@@ -112,12 +112,12 @@ export default function PerformancePage() {
     }
     if (prev.s === -1) return
 
-    const beat = measures[currentMeasure]?.beats[currentBeat]
-    if (!beat) return
+    const measure = measures[currentMeasure]
+    if (!measure) return
 
     let endTicks = 0
-    for (let i = 0; i < currentSubdivision && i < beat.subdivisions.length; i++) {
-      endTicks += subdivDurationTicks(beat.subdivisions[i])
+    for (let i = 0; i < currentSubdivision && i < measure.subdivisions.length; i++) {
+      endTicks += subdivDurationTicks(measure.subdivisions[i])
     }
     const beatTicks = beatCapacityTicks(timeSignature.noteValue)
     const wrapped = ((endTicks % beatTicks) + beatTicks) % beatTicks

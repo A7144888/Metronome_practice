@@ -163,39 +163,43 @@ class AudioEngine {
 
   /**
    * Build the flat playback schedule from measure data.
-   * Each entry: { measureIdx, beatIdx, subdivIdx, accent, durationTicks, silent }
+   * Subdivisions are stored flat at the measure level; beat indices are
+   * computed from tick positions so that cross-beat notes work correctly.
    */
   buildFlatSchedule(measures, timeSignature) {
-    const { noteValue } = timeSignature
-    const beatCapTicks  = beatCapacityTicks(noteValue)
-    this.flatSchedule   = []
+    const { noteValue, beats } = timeSignature
+    const beatCapTicks = beatCapacityTicks(noteValue)
+    this.flatSchedule  = []
 
     measures.forEach((measure, mIdx) => {
-      measure.beats.forEach((beat, bIdx) => {
-        if (!beat.subdivisions || beat.subdivisions.length === 0) {
-          // Fallback: one click per beat
+      const subs = measure.subdivisions ?? []
+      if (subs.length === 0) {
+        for (let b = 0; b < beats; b++) {
           this.flatSchedule.push({
             measureIdx:    mIdx,
-            beatIdx:       bIdx,
+            beatIdx:       b,
             subdivIdx:     0,
-            accent:        bIdx === 0 ? 'strong' : 'normal',
+            accent:        b === 0 ? 'strong' : 'normal',
             durationTicks: beatCapTicks,
             silent:        false,
           })
-          return
         }
+        return
+      }
 
-        const entries = buildPlaybackEntries(beat.subdivisions)
-        entries.forEach((entry, sIdx) => {
-          this.flatSchedule.push({
-            measureIdx:    mIdx,
-            beatIdx:       bIdx,
-            subdivIdx:     sIdx,
-            accent:        entry.accent || 'normal',
-            durationTicks: entry.durationTicks,
-            silent:        entry.silent || entry.accent === 'none',
-          })
+      const entries = buildPlaybackEntries(subs)
+      let tickPos = 0
+      entries.forEach((entry, sIdx) => {
+        const beatIdx = Math.floor(tickPos / beatCapTicks)
+        this.flatSchedule.push({
+          measureIdx:    mIdx,
+          beatIdx,
+          subdivIdx:     sIdx,
+          accent:        entry.accent || 'normal',
+          durationTicks: entry.durationTicks,
+          silent:        entry.silent || entry.accent === 'none',
         })
+        tickPos += entry.durationTicks
       })
     })
   }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMetronomeStore } from '../store/metronomeStore'
 
-export default function BeatIndicator() {
+export default function BeatIndicator({ fillHeight = false }) {
   const { currentBeat, timeSignature, isPlaying } = useMetronomeStore()
   const [flash, setFlash] = useState(-1)
 
@@ -16,7 +16,7 @@ export default function BeatIndicator() {
   const beats = timeSignature.beats
 
   return (
-    <div className="flex justify-center gap-3 flex-wrap">
+    <div className={`flex justify-center gap-3 ${fillHeight ? 'h-full' : ''}`}>
       {Array.from({ length: beats }, (_, i) => {
         const active = flash === i
         const isFirst = i === 0
@@ -24,7 +24,8 @@ export default function BeatIndicator() {
           <div
             key={i}
             className={`
-              flex-1 max-w-[80px] h-20 rounded-lg flex items-center justify-center border-2 transition-all duration-100 ease-md3
+              flex-1 max-w-[120px] rounded-lg flex items-center justify-center border-2 transition-all duration-100 ease-md3
+              ${fillHeight ? 'h-full' : 'h-20'}
               ${active
                 ? isFirst
                   ? 'bg-md-primary border-md-primary shadow-glow text-white scale-105'

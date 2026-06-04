@@ -3,11 +3,14 @@ import {
   NOTE_VALUES,
   NOTE_SYMBOLS,
   NOTE_SHORT_LABELS,
-  TICKS_PER_QUARTER,
-  validateBeat,
+  NOTE_HEAD_OPEN,
+  validateMeasure,
   subdivDurationTicks,
   beatCapacityTicks,
-  beatUsedTicks,
+  measureCapacityTicks,
+  measureUsedTicks,
+  relativeBeatCount,
+  hasBinaryTernaryConflict,
 } from '../engine/musicTheory'
 import Icon from './Icon'
 
@@ -25,18 +28,18 @@ const ACCENT_DISPLAY_NAME = {
   none:   'Pause',
 }
 
-function BeatCapacityBar({ beat, noteValue }) {
-  const info    = validateBeat(beat, noteValue)
-  const pct     = Math.min(100, info.percentFilled)
+function MeasureCapacityBar({ measure, beats, noteValue }) {
+  const info     = validateMeasure(measure, beats, noteValue)
+  const pct      = Math.min(100, info.percentFilled)
   const overflow = info.overflow
-  const exact   = info.exact
+  const exact    = info.exact
 
-  let barColor  = 'bg-md-primary/60'
+  let barColor = 'bg-md-primary/60'
   if (overflow) barColor = 'bg-md-error'
   else if (exact) barColor = 'bg-emerald-500'
 
   let statusText = `${info.used} / ${info.capacity}\u03C4`
-  if (exact)    statusText = 'Beat full \u2713'
+  if (exact)    statusText = 'Measure full \u2713'
   if (overflow) statusText = `Overflow by ${Math.abs(info.remaining)}\u03C4`
 
   return (
@@ -58,29 +61,31 @@ function BeatCapacityBar({ beat, noteValue }) {
   )
 }
 
-function NoteValuePicker({ sd, measureId, beatId, beat, noteValue, store }) {
-  const cap       = beatCapacityTicks(noteValue)
-  const carryOver = beat.carryOver ?? 0
+function NoteValuePicker({ sd, measureId, measure, timeSignature, store }) {
+  const { beats, noteValue } = timeSignature
+  const cap = measureCapacityTicks(beats, noteValue)
 
   return (
     <div className="flex flex-wrap gap-1">
       {NOTE_VALUES.map((nv) => {
-        const dur        = subdivDurationTicks({ value: nv, dotted: sd.dotted })
-        const otherUsed  = beatUsedTicks(beat.subdivisions.filter((x) => x.id !== sd.id))
-        const wouldOver  = otherUsed + dur + carryOver > cap
-        const isActive   = sd.value === nv
+        const otherSubs = measure.subdivisions.filter((x) => x.id !== sd.id)
+        const dur       = subdivDurationTicks({ value: nv, dotted: nv === 'triplet' ? false : sd.dotted })
+        const otherUsed = measureUsedTicks(otherSubs)
+        const wouldOver = otherUsed + dur > cap
+        const conflict  = hasBinaryTernaryConflict(otherSubs, nv)
+        const isActive  = sd.value === nv
 
         return (
           <button
             key={nv}
-            disabled={wouldOver && !isActive}
-            onClick={() => store.setSubdivisionValue(measureId, beatId, sd.id, nv)}
-            title={nv}
+            disabled={(wouldOver || conflict) && !isActive}
+            onClick={() => store.setSubdivisionValue(measureId, sd.id, nv)}
+            title={`${nv} — ${relativeBeatCount(nv, nv === 'triplet' ? false : sd.dotted, noteValue)} beat(s)`}
             className={`
               px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ease-md3 active:scale-95
               ${isActive
                 ? 'bg-md-primary text-white shadow-md3-1'
-                : wouldOver
+                : wouldOver || conflict
                 ? 'bg-transparent text-md-on-surface-variant/30 cursor-not-allowed opacity-40'
                 : 'bg-md-surface-low hover:bg-md-primary/10 text-md-on-surface-variant cursor-pointer'
               }
@@ -94,19 +99,22 @@ function NoteValuePicker({ sd, measureId, beatId, beat, noteValue, store }) {
   )
 }
 
-function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, store, isCurrentlyPlaying }) {
-  const accent  = sd.accent || 'normal'
-  const acfg    = ACCENT_CONFIG[accent] || ACCENT_CONFIG.normal
-  const dur     = subdivDurationTicks(sd)
-  const cap     = beatCapacityTicks(noteValue)
-  const carryOver = beat.carryOver ?? 0
+function NoteCard({ sd, sdIdx, totalSubs, measureId, measure, timeSignature, store, beatIdx, isCurrentlyPlaying }) {
+  const { beats, noteValue } = timeSignature
+  const accent   = sd.accent || 'normal'
+  const acfg     = ACCENT_CONFIG[accent] || ACCENT_CONFIG.normal
+  const dur      = subdivDurationTicks(sd)
+  const cap      = measureCapacityTicks(beats, noteValue)
 
-  const canTie  = sdIdx < totalSubs - 1
-  const canDot  = (() => {
-    const otherUsed  = beatUsedTicks(beat.subdivisions.filter((x) => x.id !== sd.id))
+  const canTie   = sdIdx < totalSubs - 1
+  const canDot   = (() => {
+    if (sd.value === 'triplet') return false
+    const otherUsed   = measureUsedTicks(measure.subdivisions.filter((x) => x.id !== sd.id))
     const dottedTicks = subdivDurationTicks({ value: sd.value, dotted: true })
-    return !sd.dotted || otherUsed + dottedTicks + carryOver <= cap
+    return !sd.dotted || otherUsed + dottedTicks <= cap
   })()
+
+  const beatLabel = relativeBeatCount(sd.value, sd.dotted, noteValue)
 
   return (
     <div
@@ -120,9 +128,13 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-2xl leading-none select-none text-md-fg" title={sd.value}>
+          <span
+            className="text-2xl leading-none select-none text-md-fg"
+            title={sd.value}
+            style={NOTE_HEAD_OPEN.has(sd.value) ? { WebkitTextStroke: '1.5px currentColor', color: 'transparent' } : undefined}
+          >
             {NOTE_SYMBOLS[sd.value] || '♩'}
-            {sd.dotted && <span className="text-md-tertiary text-lg">•</span>}
+            {sd.dotted && <span className="text-md-tertiary text-lg" style={{ WebkitTextStroke: 'initial', color: '' }}>•</span>}
           </span>
           <div className="flex flex-col">
             <span className="text-xs font-medium leading-tight text-md-fg">
@@ -130,13 +142,13 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
               {sd.dotted && ' (Dotted)'}
             </span>
             <span className="text-[10px] text-md-on-surface-variant/60 font-mono">
-              {`${dur}\u03C4 / ${TICKS_PER_QUARTER}\u03C4`}
+              {beatLabel} beat{beatLabel !== '1' ? 's' : ''} · beat {beatIdx + 1}
             </span>
           </div>
         </div>
         {totalSubs > 1 && (
           <button
-            onClick={() => store.removeSubdivision(measureId, beatId, sd.id)}
+            onClick={() => store.removeSubdivision(measureId, sd.id)}
             className="w-5 h-5 rounded-full flex items-center justify-center text-md-on-surface-variant hover:text-md-error hover:bg-md-error/10 transition-all duration-200 shrink-0"
           >
             <Icon name="close" className="text-sm" />
@@ -147,9 +159,8 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
       <NoteValuePicker
         sd={sd}
         measureId={measureId}
-        beatId={beatId}
-        beat={beat}
-        noteValue={noteValue}
+        measure={measure}
+        timeSignature={timeSignature}
         store={store}
       />
 
@@ -158,7 +169,7 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
           onClick={() => {
             const idx  = ACCENT_TYPES.indexOf(accent)
             const next = ACCENT_TYPES[(idx + 1) % ACCENT_TYPES.length]
-            store.updateSubdivision(measureId, beatId, sd.id, { accent: next })
+            store.updateSubdivision(measureId, sd.id, { accent: next })
           }}
           className={`
             flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all duration-300 ease-md3 active:scale-95
@@ -171,7 +182,7 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
         </button>
 
         <button
-          onClick={() => store.toggleDotted(measureId, beatId, sd.id)}
+          onClick={() => store.toggleDotted(measureId, sd.id)}
           disabled={!canDot && !sd.dotted}
           className={`
             flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all duration-300 ease-md3 active:scale-95
@@ -188,7 +199,7 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
         </button>
 
         <button
-          onClick={() => canTie && store.toggleTie(measureId, beatId, sd.id)}
+          onClick={() => canTie && store.toggleTie(measureId, sd.id)}
           disabled={!canTie}
           className={`
             flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all duration-300 ease-md3 active:scale-95
@@ -220,69 +231,11 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, beatId, beat, noteValue, st
   )
 }
 
-function BeatRow({ measure, beat, beatIdx, currentBeat, currentSubdiv, isPlaying, timeSignature }) {
-  const store        = useMetronomeStore()
-  const { noteValue } = timeSignature
-  const isActiveBeat = isPlaying && currentBeat === beatIdx
-
-  return (
-    <div
-      className={`
-        rounded-lg border p-4 transition-all duration-300 ease-md3
-        ${isActiveBeat
-          ? 'border-md-primary/40 bg-md-primary/5 shadow-md3-1'
-          : 'border-md-outline/15 bg-md-surface/50 hover:bg-md-surface'
-        }
-      `}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span
-            className={`
-              w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium border-2 transition-colors duration-300
-              ${isActiveBeat ? 'bg-md-primary border-md-primary text-white' : 'border-md-outline/40 text-md-on-surface-variant'}
-            `}
-          >
-            {beatIdx + 1}
-          </span>
-          <span className="text-xs font-medium text-md-on-surface-variant/70 uppercase tracking-wider">
-            Beat {beatIdx + 1}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <BeatCapacityBar beat={beat} noteValue={noteValue} />
-          <button
-            onClick={() => store.addSubdivision(measure.id, beat.id)}
-            className="flex items-center gap-1 text-[10px] text-md-primary hover:bg-md-primary/10 px-2 py-1 rounded-full transition-all duration-300 ease-md3 font-medium uppercase tracking-wider active:scale-95"
-          >
-            <Icon name="add" className="text-sm" />
-            Add
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        {beat.subdivisions.map((sd, sdIdx) => (
-          <NoteCard
-            key={sd.id}
-            sd={sd}
-            sdIdx={sdIdx}
-            totalSubs={beat.subdivisions.length}
-            measureId={measure.id}
-            beatId={beat.id}
-            beat={beat}
-            noteValue={noteValue}
-            store={store}
-            isCurrentlyPlaying={isPlaying && currentBeat === beatIdx && currentSubdiv === sdIdx}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export default function SubdivisionEditor() {
-  const { measures, timeSignature, currentBeat, currentSubdivision, isPlaying } = useMetronomeStore()
+  const store = useMetronomeStore()
+  const { measures, timeSignature, currentBeat, currentSubdivision, isPlaying } = store
+  const { beats, noteValue } = timeSignature
+  const beatCap = beatCapacityTicks(noteValue)
 
   return (
     <div className="flex flex-col gap-6">
@@ -306,22 +259,46 @@ export default function SubdivisionEditor() {
         </div>
       </div>
 
-      {measures.map((measure) => (
-        <div key={measure.id} className="flex flex-col gap-3">
-          {measure.beats.map((beat, beatIdx) => (
-            <BeatRow
-              key={beat.id}
-              measure={measure}
-              beat={beat}
-              beatIdx={beatIdx}
-              currentBeat={currentBeat}
-              currentSubdiv={currentSubdivision}
-              isPlaying={isPlaying}
-              timeSignature={timeSignature}
-            />
-          ))}
-        </div>
-      ))}
+      {measures.map((measure) => {
+        let tickPos = 0
+
+        return (
+          <div key={measure.id} className="flex flex-col gap-3">
+            <MeasureCapacityBar measure={measure} beats={beats} noteValue={noteValue} />
+
+            <div className="flex flex-wrap gap-3">
+              {measure.subdivisions.map((sd, sdIdx) => {
+                const sdBeatIdx = Math.floor(tickPos / beatCap)
+                const isActive  = isPlaying && currentBeat === sdBeatIdx && currentSubdivision === sdIdx
+                tickPos += subdivDurationTicks(sd)
+
+                return (
+                  <NoteCard
+                    key={sd.id}
+                    sd={sd}
+                    sdIdx={sdIdx}
+                    totalSubs={measure.subdivisions.length}
+                    measureId={measure.id}
+                    measure={measure}
+                    timeSignature={timeSignature}
+                    store={store}
+                    beatIdx={sdBeatIdx}
+                    isCurrentlyPlaying={isActive}
+                  />
+                )
+              })}
+            </div>
+
+            <button
+              onClick={() => store.addSubdivision(measure.id)}
+              className="self-start flex items-center gap-1 text-[10px] text-md-primary hover:bg-md-primary/10 px-3 py-1.5 rounded-full transition-all duration-300 ease-md3 font-medium uppercase tracking-wider active:scale-95 border border-md-primary/30"
+            >
+              <Icon name="add" className="text-sm" />
+              Add Note
+            </button>
+          </div>
+        )
+      })}
     </div>
   )
 }

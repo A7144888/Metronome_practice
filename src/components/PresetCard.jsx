@@ -3,10 +3,12 @@ import { useMetronomeStore } from '../store/metronomeStore'
 import Icon from './Icon'
 
 export default function PresetCard({ preset }) {
-  const { loadPreset, toggleFavorite, deletePreset } = useMetronomeStore()
+  const { loadPreset, toggleFavorite, deletePreset, renamePreset } = useMetronomeStore()
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [renameName, setRenameName] = useState('')
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -21,6 +23,13 @@ export default function PresetCard({ preset }) {
   const handleDelete = () => {
     deletePreset(preset.id)
     setConfirmOpen(false)
+  }
+
+  const handleRename = () => {
+    if (renameName.trim()) {
+      renamePreset(preset.id, renameName)
+      setRenameOpen(false)
+    }
   }
 
   return (
@@ -66,6 +75,17 @@ export default function PresetCard({ preset }) {
 
               {menuOpen && (
                 <div className="absolute right-0 top-full mt-1 w-40 bg-md-surface border border-md-outline/20 rounded-sm shadow-md3-3 z-30 overflow-hidden">
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setRenameName(preset.name)
+                      setRenameOpen(true)
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-md-on-surface-variant hover:bg-md-primary/10 transition-colors duration-200"
+                  >
+                    <Icon name="edit" className="text-base" />
+                    Rename
+                  </button>
                   <button
                     onClick={() => {
                       setMenuOpen(false)
@@ -135,6 +155,43 @@ export default function PresetCard({ preset }) {
                 className="flex-1 py-2.5 rounded-full bg-md-error text-white text-sm font-medium hover:bg-md-error/90 transition-all duration-300 ease-md3 active:scale-95"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {renameOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setRenameOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-md-surface border border-md-outline/20 rounded-xl p-6 w-full max-w-sm shadow-md3-4"
+          >
+            <h3 className="text-lg font-medium mb-4 text-md-fg">Rename preset</h3>
+            <input
+              type="text"
+              value={renameName}
+              onChange={(e) => setRenameName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+              className="w-full bg-md-surface-low border-b-2 border-md-outline rounded-t-sm px-4 py-3 text-sm mb-4 focus:border-md-primary outline-none transition-colors duration-200 text-md-fg placeholder:text-md-on-surface-variant/50"
+              placeholder="Preset name..."
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRenameOpen(false)}
+                className="flex-1 py-2.5 rounded-full border border-md-outline text-sm font-medium hover:bg-md-primary/5 transition-all duration-300 ease-md3 active:scale-95 text-md-fg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRename}
+                className="flex-1 py-2.5 rounded-full btn-primary text-sm"
+              >
+                Rename
               </button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useMetronomeStore } from '../store/metronomeStore'
 import { audioEngine } from '../engine/audioEngine'
-import { isBeatFull } from '../engine/musicTheory'
+import { isMeasureFull } from '../engine/musicTheory'
 
 /**
  * Transport state machine (skill: transport-state-machine)
@@ -71,10 +71,8 @@ export function useMetronome() {
       return
     }
 
-    // Refuse to start a fresh playback while any beat is not exactly full.
-    // Partial beats would play shorter than expected and drift the tempo.
     const allFull = measures.every((m) =>
-      m.beats.every((b) => isBeatFull(b, timeSignature.noteValue))
+      isMeasureFull(m, timeSignature.beats, timeSignature.noteValue)
     )
     if (!allFull) return
 
@@ -151,11 +149,8 @@ export function useMetronome() {
 
   useEffect(() => {
     if (!isPlaying) return
-    // If an edit left any beat partial/overflowing, stop playback immediately.
-    // Continuing would schedule clicks against an invalid bar (drifting tempo
-    // or silent gaps), so we force the user back to idle until they fix it.
     const allFull = measures.every((m) =>
-      m.beats.every((b) => isBeatFull(b, timeSignature.noteValue))
+      isMeasureFull(m, timeSignature.beats, timeSignature.noteValue)
     )
     if (!allFull) {
       stop()
