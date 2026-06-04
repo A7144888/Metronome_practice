@@ -92,12 +92,12 @@ export default function SequenceGrid() {
       <div className="flex flex-col gap-2">
         {measures.map((measure) => (
           <div key={measure.id} className="flex flex-col gap-1">
-            {/* Beat numbers row */}
+            {/* Beat numbers row — left-aligned to match beat boundaries */}
             <div className="flex items-center gap-0.5 h-5 pl-7">
               {Array.from({ length: beats }, (_, bIdx) => (
                 <div
                   key={bIdx}
-                  className={`text-[9px] font-medium text-center ${
+                  className={`text-[9px] font-medium text-left pl-0.5 ${
                     isPlaying && currentBeat === bIdx
                       ? 'text-md-primary'
                       : 'text-md-on-surface-variant/40'

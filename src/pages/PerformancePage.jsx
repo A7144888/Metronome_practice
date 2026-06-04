@@ -5,9 +5,12 @@ import {
   isMeasureFull,
   beatCapacityTicks,
   subdivDurationTicks,
+  measureCapacityTicks,
+  relativeBeatCount,
+  NOTE_SYMBOLS,
+  NOTE_HEAD_OPEN,
   BASE_DURATIONS_TICKS,
 } from '../engine/musicTheory'
-import BeatIndicator from '../components/BeatIndicator'
 import Icon from '../components/Icon'
 import LibraryMenu from '../components/LibraryMenu'
 
@@ -325,9 +328,98 @@ export default function PerformancePage() {
           </div>
         </button>
 
-        {/* Beat Indicator */}
+        {/* Sequence Grid (read-only) */}
         <div className="w-full">
-          <BeatIndicator />
+          {measures.map((measure) => {
+            const { beats, noteValue: nv } = timeSignature
+            const beatCap = beatCapacityTicks(nv)
+            const measCap = measureCapacityTicks(beats, nv)
+
+            const notes = []
+            let tickPos = 0
+            measure.subdivisions.forEach((sd, sIdx) => {
+              const dur = subdivDurationTicks(sd)
+              notes.push({
+                sdIdx: sIdx,
+                beatIdx: Math.floor(tickPos / beatCap),
+                accent: sd.accent,
+                value: sd.value,
+                dotted: sd.dotted,
+                tie: sd.tie,
+                dur,
+                widthFraction: dur / measCap,
+              })
+              tickPos += dur
+            })
+
+            const COLORS = {
+              strong: { active: 'bg-md-primary border-md-primary shadow-glow-sm', base: 'bg-md-primary/80 border-md-primary/80' },
+              medium: { active: 'bg-md-tertiary border-md-tertiary', base: 'bg-md-tertiary/70 border-md-tertiary/70' },
+              normal: { active: 'bg-md-outline border-md-outline', base: 'bg-md-outline/60 border-md-outline/60' },
+              none:   { active: 'bg-md-surface-low/80 border-md-outline/40', base: 'bg-md-surface-low/50 border-md-outline/30' },
+            }
+
+            return (
+              <div key={measure.id} className="flex flex-col gap-1">
+                <div className="flex items-center gap-0.5 h-5">
+                  {Array.from({ length: beats }, (_, bIdx) => (
+                    <div
+                      key={bIdx}
+                      className={`text-[9px] font-medium text-left pl-0.5 ${
+                        isPlaying && currentBeat === bIdx
+                          ? 'text-md-primary'
+                          : 'text-md-on-surface-variant/40'
+                      }`}
+                      style={{ flex: 1 }}
+                    >
+                      {bIdx + 1}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-stretch gap-0.5 h-16">
+                  {notes.map((note) => {
+                    const isActive =
+                      isPlaying && note.beatIdx === currentBeat && note.sdIdx === currentSubdivision
+                    const colors = COLORS[note.accent] || COLORS.normal
+                    const dynLabel = relativeBeatCount(note.value, note.dotted, nv)
+
+                    return (
+                      <div
+                        key={note.sdIdx}
+                        style={{ flex: note.widthFraction }}
+                        className={`
+                          relative rounded-sm border flex flex-col items-center justify-center gap-0.5
+                          text-[10px] font-medium transition-all duration-150 ease-md3 overflow-hidden min-w-0
+                          ${isActive ? `${colors.active} scale-y-105` : colors.base}
+                        `}
+                      >
+                        <span
+                          className="leading-none"
+                          style={{
+                            fontSize: 24,
+                            ...(NOTE_HEAD_OPEN.has(note.value)
+                              ? { WebkitTextStroke: '1.5px rgba(255,255,255,0.9)', color: 'transparent' }
+                              : { color: 'rgba(255,255,255,0.9)' }),
+                          }}
+                        >
+                          {NOTE_SYMBOLS[note.value] || '♩'}
+                          {note.value === 'triplet' && <sup className="text-amber-300" style={{ fontSize: 11, WebkitTextStroke: 'initial', color: '' }}>3</sup>}
+                          {note.dotted && <span className="text-amber-300" style={{ fontSize: 13, WebkitTextStroke: 'initial', color: '' }}>•</span>}
+                        </span>
+                        <span className="text-white/70 leading-none" style={{ fontSize: 12 }}>
+                          {dynLabel}
+                        </span>
+                        {note.tie && (
+                          <span className="absolute right-0 top-0 text-sky-300 text-[8px] leading-none pr-0.5">⌢</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
 
       </main>

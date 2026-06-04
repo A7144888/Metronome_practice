@@ -166,6 +166,17 @@ class AudioEngine {
    * Subdivisions are stored flat at the measure level; beat indices are
    * computed from tick positions so that cross-beat notes work correctly.
    */
+  /**
+   * Build the flat playback schedule from measure data.
+   * Subdivisions are stored flat at the measure level; beat indices are
+   * computed from tick positions so that cross-beat notes work correctly.
+   *
+   * When a note's duration spans one or more beat boundaries, it is split
+   * into chunks at each boundary. Only the first chunk produces sound;
+   * subsequent chunks are silent "ghost" entries whose sole purpose is to
+   * fire onBeatCallback so that the beat indicator flashes on every
+   * integer beat — even when no new note attack occurs on that beat.
+   */
   buildFlatSchedule(measures, timeSignature) {
     const { noteValue, beats } = timeSignature
     const beatCapTicks = beatCapacityTicks(noteValue)
@@ -190,16 +201,47 @@ class AudioEngine {
       const entries = buildPlaybackEntries(subs)
       let tickPos = 0
       entries.forEach((entry, sIdx) => {
-        const beatIdx = Math.floor(tickPos / beatCapTicks)
-        this.flatSchedule.push({
-          measureIdx:    mIdx,
-          beatIdx,
-          subdivIdx:     sIdx,
-          accent:        entry.accent || 'normal',
-          durationTicks: entry.durationTicks,
-          silent:        entry.silent || entry.accent === 'none',
-        })
-        tickPos += entry.durationTicks
+        const dur       = entry.durationTicks
+        const startBeat = Math.floor(tickPos / beatCapTicks)
+        const lastBeat  = dur > 0
+          ? Math.floor((tickPos + dur - 1) / beatCapTicks)
+          : startBeat
+
+        if (lastBeat <= startBeat) {
+          this.flatSchedule.push({
+            measureIdx:    mIdx,
+            beatIdx:       startBeat,
+            subdivIdx:     sIdx,
+            accent:        entry.accent || 'normal',
+            durationTicks: dur,
+            silent:        entry.silent || entry.accent === 'none',
+          })
+        } else {
+          let remaining = dur
+          let curTick   = tickPos
+          let isFirst   = true
+
+          while (remaining > 0) {
+            const curBeat      = Math.floor(curTick / beatCapTicks)
+            const nextBeatTick = (curBeat + 1) * beatCapTicks
+            const chunkDur     = Math.min(nextBeatTick - curTick, remaining)
+
+            this.flatSchedule.push({
+              measureIdx:    mIdx,
+              beatIdx:       curBeat,
+              subdivIdx:     sIdx,
+              accent:        isFirst ? (entry.accent || 'normal') : 'none',
+              durationTicks: chunkDur,
+              silent:        isFirst ? (entry.silent || entry.accent === 'none') : true,
+            })
+
+            remaining -= chunkDur
+            curTick   += chunkDur
+            isFirst    = false
+          }
+        }
+
+        tickPos += dur
       })
     })
   }

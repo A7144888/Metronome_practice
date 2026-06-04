@@ -11,8 +11,8 @@ import Icon from '../components/Icon'
 import LibraryMenu from '../components/LibraryMenu'
 
 const TABS = [
-  { id: 'grid', label: 'Grid', icon: 'grid_view' },
-  { id: 'beats', label: 'Beats', icon: 'tune' },
+  { id: 'beat', label: 'Beat', icon: 'music_note' },
+  { id: 'mixer', label: 'Mixer', icon: 'tune' },
 ]
 
 const LEFT_MIN = 200
@@ -64,7 +64,7 @@ export default function EditorPage() {
     bpm, timeSignature, setView, saveAsPreset, exportJson, importJson,
     updateActivePreset, activePresetId, presets,
   } = useMetronomeStore()
-  const [activeTab, setActiveTab] = useState('grid')
+  const [activeTab, setActiveTab] = useState('beat')
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveName, setSaveName] = useState('')
   const [savedFlash, setSavedFlash] = useState(false)
@@ -327,15 +327,15 @@ export default function EditorPage() {
 
           {/* Tab Content */}
           <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
-            {activeTab === 'grid' && (
+            {activeTab === 'beat' && (
               <div className="flex flex-col gap-6">
                 <SequenceGrid />
                 <div className="border-t border-md-outline/15 pt-6">
-                  <MixerPanel />
+                  <SubdivisionEditor />
                 </div>
               </div>
             )}
-            {activeTab === 'beats' && <SubdivisionEditor />}
+            {activeTab === 'mixer' && <MixerPanel />}
           </div>
         </div>
       </div>
