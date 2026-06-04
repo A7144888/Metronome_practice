@@ -16,11 +16,14 @@ import {
 const LOOKAHEAD_MS          = 25      // scheduler fires every 25 ms
 const SCHEDULE_AHEAD_SECS   = 0.1    // schedule up to 100 ms ahead
 
-// ── Default accent gain levels (skill: strong=1.0, medium=0.65, normal=0.4) ──
+/** Scales UI master (0–1) to output; clicks are short and need headroom boost. */
+const MASTER_OUTPUT_BOOST = 2.5
+
+// Per-click peak gain (master is applied only on masterGain, not here)
 const DEFAULT_ACCENT_GAIN = {
   strong: 1.0,
-  medium: 0.65,
-  normal: 0.4,
+  medium: 0.85,
+  normal: 0.7,
 }
 
 class AudioEngine {
@@ -34,7 +37,7 @@ class AudioEngine {
     this.scheduleIndex   = 0
     this.pausedAtIndex   = null    // non-null when paused
     this.bpm             = 120
-    this.masterVolume    = 0.8
+    this.masterVolume    = 1.0
     this.accentVolumes   = { ...DEFAULT_ACCENT_GAIN }
     this.soundSet        = 'woodblock'
   }
@@ -45,8 +48,14 @@ class AudioEngine {
     if (this.audioCtx) return
     this.audioCtx  = new (window.AudioContext || window.webkitAudioContext)()
     this.masterGain = this.audioCtx.createGain()
-    this.masterGain.gain.value = this.masterVolume
+    this._applyMasterGain(this.masterVolume)
     this.masterGain.connect(this.audioCtx.destination)
+  }
+
+  _applyMasterGain(vol) {
+    if (!this.masterGain || !this.audioCtx) return
+    const out = Math.min(4, Math.max(0, vol * MASTER_OUTPUT_BOOST))
+    this.masterGain.gain.setTargetAtTime(out, this.audioCtx.currentTime, 0.01)
   }
 
   /**
@@ -80,14 +89,15 @@ class AudioEngine {
    * @param {number} atTime  - AudioContext scheduled time in seconds
    */
   _applyAccent(gainNode, accent, atTime) {
-    const baseGain  = this.accentVolumes[accent] ?? this.accentVolumes.normal
-    const vol       = baseGain * this.masterVolume
-    const RAMP_IN   = 0.005   // 5 ms linear attack — avoids zipper noise
-    const RAMP_OUT  = 0.10    // 100 ms exponential decay
+    const baseGain = this.accentVolumes[accent] ?? this.accentVolumes.normal
+    // Accent only here — masterVolume is on masterGain (avoids double attenuation)
+    const vol     = Math.min(1.5, baseGain)
+    const RAMP_IN  = 0.003
+    const RAMP_OUT = 0.12
 
-    gainNode.gain.setValueAtTime(0.001, atTime)
+    gainNode.gain.setValueAtTime(0.01, atTime)
     gainNode.gain.linearRampToValueAtTime(vol, atTime + RAMP_IN)
-    gainNode.gain.exponentialRampToValueAtTime(0.001, atTime + RAMP_OUT)
+    gainNode.gain.exponentialRampToValueAtTime(0.01, atTime + RAMP_OUT)
   }
 
   // ── Sound synthesis ────────────────────────────────────────────────────────
@@ -291,6 +301,7 @@ class AudioEngine {
     // Must await resume before anchoring nextNoteTime — otherwise the first
     // clicks may be scheduled for a currentTime that's still frozen at 0.
     await this._ensureResumed()
+    this._applyMasterGain(this.masterVolume)
 
     this.buildFlatSchedule(measures, timeSignature)
     this.scheduleIndex    = 0
@@ -342,9 +353,7 @@ class AudioEngine {
 
   updateMasterVolume(vol) {
     this.masterVolume = vol
-    if (this.masterGain) {
-      this.masterGain.gain.setTargetAtTime(vol, this.audioCtx.currentTime, 0.01)
-    }
+    this._applyMasterGain(vol)
   }
 
   updateAccentVolumes(av) {

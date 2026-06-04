@@ -32,8 +32,8 @@ export const ACCENT_TYPES = ['strong', 'medium', 'normal', 'none']
 
 export const ACCENT_GAIN = {
   strong: 1.0,
-  medium: 0.65,
-  normal: 0.4,
+  medium: 0.85,
+  normal: 0.7,
   none:   0,
 }
 
@@ -96,7 +96,7 @@ const createDefaultState = () => ({
   measures:          [defaultMeasure(4, 4)],
   soundSet:          'woodblock',
   masterVolume:      0.8,
-  accentVolumes:     { strong: 1.0, medium: 0.65, normal: 0.4 },
+  accentVolumes:     { strong: 1.0, medium: 0.85, normal: 0.7 },
   isPlaying:         false,
   isPaused:          false,
   currentBeat:       -1,
@@ -417,7 +417,7 @@ export const useMetronomeStore = create((set, get) => ({
       measures:       [defaultMeasure(4, 4)],
       soundSet:       'woodblock',
       masterVolume:   0.8,
-      accentVolumes:  { strong: 1.0, medium: 0.65, normal: 0.4 },
+      accentVolumes:  { strong: 1.0, medium: 0.85, normal: 0.7 },
       activePresetId: null,
     })
   },
