@@ -208,7 +208,7 @@ class AudioEngine {
         return
       }
 
-      const entries = buildPlaybackEntries(subs)
+      const entries = buildPlaybackEntries(subs, noteValue)
       let tickPos = 0
       entries.forEach((entry, sIdx) => {
         const dur       = entry.durationTicks

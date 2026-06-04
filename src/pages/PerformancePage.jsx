@@ -120,7 +120,7 @@ export default function PerformancePage() {
 
     let endTicks = 0
     for (let i = 0; i < currentSubdivision && i < measure.subdivisions.length; i++) {
-      endTicks += subdivDurationTicks(measure.subdivisions[i])
+      endTicks += subdivDurationTicks(measure.subdivisions[i], timeSignature.noteValue)
     }
     const beatTicks = beatCapacityTicks(timeSignature.noteValue)
     const wrapped = ((endTicks % beatTicks) + beatTicks) % beatTicks
@@ -338,7 +338,7 @@ export default function PerformancePage() {
             const notes = []
             let tickPos = 0
             measure.subdivisions.forEach((sd, sIdx) => {
-              const dur = subdivDurationTicks(sd)
+              const dur = subdivDurationTicks(sd, nv)
               notes.push({
                 sdIdx: sIdx,
                 beatIdx: Math.floor(tickPos / beatCap),

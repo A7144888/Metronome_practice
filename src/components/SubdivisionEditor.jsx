@@ -69,8 +69,8 @@ function NoteValuePicker({ sd, measureId, measure, timeSignature, store }) {
     <div className="flex flex-wrap gap-1">
       {NOTE_VALUES.map((nv) => {
         const otherSubs = measure.subdivisions.filter((x) => x.id !== sd.id)
-        const dur       = subdivDurationTicks({ value: nv, dotted: nv === 'triplet' ? false : sd.dotted })
-        const otherUsed = measureUsedTicks(otherSubs)
+        const dur       = subdivDurationTicks({ value: nv, dotted: nv === 'triplet' ? false : sd.dotted }, noteValue)
+        const otherUsed = measureUsedTicks(otherSubs, noteValue)
         const wouldOver = otherUsed + dur > cap
         const conflict  = hasBinaryTernaryConflictForNote(measure, sd.id, nv, noteValue)
         const isActive  = sd.value === nv
@@ -103,14 +103,14 @@ function NoteCard({ sd, sdIdx, totalSubs, measureId, measure, timeSignature, sto
   const { beats, noteValue } = timeSignature
   const accent   = sd.accent || 'normal'
   const acfg     = ACCENT_CONFIG[accent] || ACCENT_CONFIG.normal
-  const dur      = subdivDurationTicks(sd)
+  const dur      = subdivDurationTicks(sd, noteValue)
   const cap      = measureCapacityTicks(beats, noteValue)
 
   const canTie   = sdIdx < totalSubs - 1
   const canDot   = (() => {
     if (sd.value === 'triplet') return false
-    const otherUsed   = measureUsedTicks(measure.subdivisions.filter((x) => x.id !== sd.id))
-    const dottedTicks = subdivDurationTicks({ value: sd.value, dotted: true })
+    const otherUsed   = measureUsedTicks(measure.subdivisions.filter((x) => x.id !== sd.id), noteValue)
+    const dottedTicks = subdivDurationTicks({ value: sd.value, dotted: true }, noteValue)
     return !sd.dotted || otherUsed + dottedTicks <= cap
   })()
 
@@ -270,7 +270,7 @@ export default function SubdivisionEditor() {
               {measure.subdivisions.map((sd, sdIdx) => {
                 const sdBeatIdx = Math.floor(tickPos / beatCap)
                 const isActive  = isPlaying && currentBeat === sdBeatIdx && currentSubdivision === sdIdx
-                tickPos += subdivDurationTicks(sd)
+                tickPos += subdivDurationTicks(sd, noteValue)
 
                 return (
                   <NoteCard

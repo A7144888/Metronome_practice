@@ -140,7 +140,7 @@ const buildPreview = (measures, timeSignature) => {
       bars.push(ACCENT_PREVIEW_HEIGHT[sd.accent] ?? 0.5)
       curBeat = beatIdx
     }
-    tickPos += subdivDurationTicks(sd)
+    tickPos += subdivDurationTicks(sd, timeSignature.noteValue)
   })
 
   while (bars.length < timeSignature.beats) bars.push(0.3)
@@ -232,12 +232,12 @@ export const useMetronomeStore = create((set, get) => ({
 
       const { beats, noteValue } = s.timeSignature
       const cap       = measureCapacityTicks(beats, noteValue)
-      const used      = measureUsedTicks(measure.subdivisions)
+      const used      = measureUsedTicks(measure.subdivisions, noteValue)
       const remaining = cap - used
       if (remaining <= 0) return {}
 
       const candidates = NOTE_VALUES.filter((nv) => {
-        const dur = subdivDurationTicks({ value: nv, dotted: false })
+        const dur = subdivDurationTicks({ value: nv, dotted: false }, noteValue)
         if (dur > remaining) return false
         if (hasBinaryTernaryConflictAtTick(measure, used, nv, noteValue, dur)) return false
         return true
@@ -287,8 +287,8 @@ export const useMetronomeStore = create((set, get) => ({
       if (sd.value === 'triplet') return {}
 
       const wouldBeDotted = !sd.dotted
-      const newTicks      = subdivDurationTicks({ value: sd.value, dotted: wouldBeDotted })
-      const otherTicks    = measureUsedTicks(measure.subdivisions.filter((x) => x.id !== subdivId))
+      const newTicks      = subdivDurationTicks({ value: sd.value, dotted: wouldBeDotted }, noteValue)
+      const otherTicks    = measureUsedTicks(measure.subdivisions.filter((x) => x.id !== subdivId), noteValue)
       const { beats, noteValue } = s.timeSignature
       const cap           = measureCapacityTicks(beats, noteValue)
 
@@ -343,13 +343,13 @@ export const useMetronomeStore = create((set, get) => ({
       if (value === 'triplet') dotted = false
 
       const otherSubs  = measure.subdivisions.filter((x) => x.id !== subdivId)
-      const otherTicks = measureUsedTicks(otherSubs)
-      const newTicks   = subdivDurationTicks({ value, dotted })
+      const otherTicks = measureUsedTicks(otherSubs, noteValue)
+      const newTicks   = subdivDurationTicks({ value, dotted }, noteValue)
       const cap        = measureCapacityTicks(beats, noteValue)
 
       if (otherTicks + newTicks > cap) {
         if (dotted) {
-          const undottedTicks = subdivDurationTicks({ value, dotted: false })
+          const undottedTicks = subdivDurationTicks({ value, dotted: false }, noteValue)
           if (otherTicks + undottedTicks <= cap) {
             dotted = false
           } else {

@@ -20,7 +20,9 @@ export const TICKS_PER_QUARTER = 480
  * | eighth         | 240    |
  * | sixteenth      | 120    |
  * | thirty-second  | 60     |
- * | triplet        | 160    | (1/3 of a quarter: 480 / 3)
+ *
+ * Triplet is not listed here — duration is one third of the current beat
+ * (time-signature note value), via tripletDurationTicks(noteValue).
  */
 export const BASE_DURATIONS_TICKS = {
   whole:           TICKS_PER_QUARTER * 4,    // 1920
@@ -29,10 +31,14 @@ export const BASE_DURATIONS_TICKS = {
   eighth:          TICKS_PER_QUARTER / 2,    // 240  (480 % 2 === 0 ✓)
   sixteenth:       TICKS_PER_QUARTER / 4,    // 120  (480 % 4 === 0 ✓)
   'thirty-second': TICKS_PER_QUARTER / 8,   // 60   (480 % 8 === 0 ✓)
-  triplet:         TICKS_PER_QUARTER / 3,   // 160  (480 % 3 === 0 ✓)
 }
 
-export const NOTE_VALUES = Object.keys(BASE_DURATIONS_TICKS)
+export const NOTE_VALUES = [...Object.keys(BASE_DURATIONS_TICKS), 'triplet']
+
+/** One triplet unit = ⅓ of one beat (per the time signature's note value). */
+export function tripletDurationTicks(noteValue) {
+  return beatCapacityTicks(noteValue) / 3
+}
 
 /**
  * Integer tick duration of a subdivision.
@@ -45,9 +51,13 @@ export const NOTE_VALUES = Object.keys(BASE_DURATIONS_TICKS)
  * Triplet notes CANNOT be dotted — dotted tuplets are non-standard in music theory
  * and create misleading duration equivalences (dotted triplet-eighth = regular eighth).
  */
-export function subdivDurationTicks(sd) {
+/**
+ * @param {object} sd - { value, dotted? }
+ * @param {number} noteValue - time signature denominator (beat unit): 4 → ¼ note beat, 8 → ⅛, etc.
+ */
+export function subdivDurationTicks(sd, noteValue = 4) {
+  if (sd.value === 'triplet') return tripletDurationTicks(noteValue)
   const base = BASE_DURATIONS_TICKS[sd.value] ?? TICKS_PER_QUARTER
-  if (sd.value === 'triplet') return base
   return sd.dotted ? (base * 3 / 2) : base
 }
 
@@ -71,13 +81,13 @@ export function measureCapacityTicks(beats, noteValue) {
 }
 
 /** Total ticks consumed by all subdivisions. */
-export function measureUsedTicks(subdivisions) {
-  return subdivisions.reduce((acc, sd) => acc + subdivDurationTicks(sd), 0)
+export function measureUsedTicks(subdivisions, noteValue) {
+  return subdivisions.reduce((acc, sd) => acc + subdivDurationTicks(sd, noteValue), 0)
 }
 
 /** Remaining ticks in a measure (negative = overflow). */
 export function measureRemainingTicks(measure, beats, noteValue) {
-  return measureCapacityTicks(beats, noteValue) - measureUsedTicks(measure.subdivisions)
+  return measureCapacityTicks(beats, noteValue) - measureUsedTicks(measure.subdivisions, noteValue)
 }
 
 /** True when the measure is exactly filled — no gap, no overflow. */
@@ -95,7 +105,7 @@ export function isMeasureOverflow(measure, beats, noteValue) {
  */
 export function validateMeasure(measure, beats, noteValue) {
   const cap  = measureCapacityTicks(beats, noteValue)
-  const used = measureUsedTicks(measure.subdivisions)
+  const used = measureUsedTicks(measure.subdivisions, noteValue)
   const remaining = cap - used
 
   return {
@@ -116,7 +126,7 @@ export function getSubdivBeatIndex(measure, sdIndex, noteValue) {
   const beatCap = beatCapacityTicks(noteValue)
   let tickPos = 0
   for (let i = 0; i < sdIndex && i < measure.subdivisions.length; i++) {
-    tickPos += subdivDurationTicks(measure.subdivisions[i])
+    tickPos += subdivDurationTicks(measure.subdivisions[i], noteValue)
   }
   return Math.floor(tickPos / beatCap)
 }
@@ -141,10 +151,10 @@ export function hasBinaryTernaryConflict(subdivisions, newValue) {
 }
 
 /** Tick span [start, end) for a subdivision in measure order. */
-export function getSubdivTickSpan(measure, subdivId) {
+export function getSubdivTickSpan(measure, subdivId, noteValue) {
   let pos = 0
   for (const sd of measure.subdivisions) {
-    const dur = subdivDurationTicks(sd)
+    const dur = subdivDurationTicks(sd, noteValue)
     if (sd.id === subdivId) return { start: pos, end: pos + dur }
     pos += dur
   }
@@ -152,11 +162,11 @@ export function getSubdivTickSpan(measure, subdivId) {
 }
 
 /** Subdivisions overlapping [rangeStart, rangeEnd), optionally excluding one id. */
-export function subdivisionsInTickRange(measure, rangeStart, rangeEnd, excludeId = null) {
+export function subdivisionsInTickRange(measure, rangeStart, rangeEnd, noteValue, excludeId = null) {
   let pos = 0
   const result = []
   for (const sd of measure.subdivisions) {
-    const dur = subdivDurationTicks(sd)
+    const dur = subdivDurationTicks(sd, noteValue)
     const sdStart = pos
     const sdEnd = pos + dur
     pos += dur
@@ -185,11 +195,11 @@ export function hasBinaryTernaryConflictForNote(measure, subdivId, newValue, not
   let pos = 0
   for (const s of measure.subdivisions) {
     if (s.id === subdivId) break
-    pos += subdivDurationTicks(s)
+    pos += subdivDurationTicks(s, noteValue)
   }
 
   const useDotted = newValue === 'triplet' ? false : (dotted !== undefined ? dotted : sd.dotted)
-  const newDur = subdivDurationTicks({ value: newValue, dotted: useDotted })
+  const newDur = subdivDurationTicks({ value: newValue, dotted: useDotted }, noteValue)
   const start = pos
   const end = pos + newDur
   const beatCap = beatCapacityTicks(noteValue)
@@ -199,7 +209,7 @@ export function hasBinaryTernaryConflictForNote(measure, subdivId, newValue, not
     const beatEnd = beatStart + beatCap
     const rangeStart = Math.max(start, beatStart)
     const rangeEnd = Math.min(end, beatEnd)
-    const inBeat = subdivisionsInTickRange(measure, rangeStart, rangeEnd, subdivId)
+    const inBeat = subdivisionsInTickRange(measure, rangeStart, rangeEnd, noteValue, subdivId)
     if (hasBinaryTernaryConflict(inBeat, newValue)) return true
   }
   return false
@@ -215,7 +225,7 @@ export function hasBinaryTernaryConflictAtTick(measure, tickStart, newValue, not
     const beatEnd = beatStart + beatCap
     const rangeStart = Math.max(tickStart, beatStart)
     const rangeEnd = Math.min(end, beatEnd)
-    const inBeat = subdivisionsInTickRange(measure, rangeStart, rangeEnd, null)
+    const inBeat = subdivisionsInTickRange(measure, rangeStart, rangeEnd, noteValue, null)
     if (hasBinaryTernaryConflict(inBeat, newValue)) return true
   }
   return false
@@ -267,7 +277,7 @@ const UNICODE_FRACTIONS = {
  *   6/8: eighth → "1",  quarter → "2",  dotted quarter → "3"
  */
 export function relativeBeatCount(sdValue, sdDotted, tsNoteValue) {
-  const dur     = subdivDurationTicks({ value: sdValue, dotted: sdDotted })
+  const dur     = subdivDurationTicks({ value: sdValue, dotted: sdDotted }, tsNoteValue)
   const beatCap = beatCapacityTicks(tsNoteValue)
 
   const g   = gcd(dur, beatCap)
@@ -301,13 +311,13 @@ export function subdivLabel(sd) {
  * A note following a tied predecessor fires silently (no re-attack) but
  * still advances the audio clock by its full tick duration.
  */
-export function buildPlaybackEntries(subdivisions) {
+export function buildPlaybackEntries(subdivisions, noteValue) {
   return subdivisions.map((sd, idx) => {
     const prevTied = idx > 0 && subdivisions[idx - 1].tie === true
     return {
       ...sd,
       silent: prevTied,
-      durationTicks: subdivDurationTicks(sd),
+      durationTicks: subdivDurationTicks(sd, noteValue),
     }
   })
 }
@@ -321,9 +331,9 @@ export function validateStructure(measures, beats, noteValue) {
   const measCap = measureCapacityTicks(beats, noteValue)
   for (const measure of measures) {
     const subs = measure.subdivisions ?? []
-    const used = measureUsedTicks(subs)
+    const used = measureUsedTicks(subs, noteValue)
     if (used > measCap) return false
-    if (subs.some(sd => !Number.isInteger(subdivDurationTicks(sd)))) return false
+    if (subs.some((sd) => !Number.isInteger(subdivDurationTicks(sd, noteValue)))) return false
   }
   return true
 }

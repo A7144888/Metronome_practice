@@ -51,7 +51,7 @@ export default function SequenceGrid() {
   measures.forEach((measure) => {
     let tickPos = 0
     measure.subdivisions.forEach((sd, sIdx) => {
-      const dur     = subdivDurationTicks(sd)
+      const dur     = subdivDurationTicks(sd, noteValue)
       const beatIdx = Math.floor(tickPos / beatCap)
       allNotes.push({
         measureId: measure.id,
