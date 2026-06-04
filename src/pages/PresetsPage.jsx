@@ -83,16 +83,16 @@ export default function PresetsPage() {
   const filterActive = filterTag && filterTag !== 'all'
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
+    <div className="flex-1 flex flex-col h-dvh overflow-hidden relative">
       {/* MD3 organic blur shapes */}
       <div className="absolute -top-32 -right-32 w-96 h-96 bg-md-primary/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
       <div className="absolute bottom-0 -left-24 w-72 h-72 bg-md-tertiary/8 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
 
       {/* Header */}
-      <header className="h-20 border-b border-md-outline/15 flex items-center justify-between px-8 bg-md-bg/80 backdrop-blur-md shrink-0 relative z-30">
-        <div className="flex items-center gap-4">
+      <header className="border-b border-md-outline/15 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-4 sm:px-8 sm:py-0 sm:h-20 bg-md-bg/80 backdrop-blur-md shrink-0 relative z-30">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-wrap">
           <LibraryMenu />
-          <h2 className="hidden md:block text-2xl font-medium text-md-fg">{meta.title}</h2>
+          <h2 className="text-lg sm:text-2xl font-medium text-md-fg truncate">{meta.title}</h2>
           <span className="bg-md-secondary-container text-md-primary text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase">
             {filtered.length} Items
           </span>
@@ -107,11 +107,11 @@ export default function PresetsPage() {
             </button>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none min-w-0">
             <Icon name="search" className="absolute left-3 top-1/2 -translate-y-1/2 text-md-on-surface-variant/50 text-xl" />
             <input
-              className="pl-10 pr-4 py-2.5 bg-md-surface-low border-b-2 border-md-outline/30 rounded-t-sm text-sm w-64 focus:border-md-primary transition-colors duration-200 outline-none text-md-fg placeholder:text-md-on-surface-variant/50"
+              className="pl-10 pr-4 py-2.5 bg-md-surface-low border-b-2 border-md-outline/30 rounded-t-sm text-sm w-full sm:w-64 focus:border-md-primary transition-colors duration-200 outline-none text-md-fg placeholder:text-md-on-surface-variant/50"
               placeholder={meta.placeholder}
               type="text"
               value={searchQuery}
@@ -161,7 +161,7 @@ export default function PresetsPage() {
       </header>
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-10">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar relative z-10 min-h-0">
         {filtered.length === 0 ? (
           <EmptyState
             icon={meta.emptyIcon}
@@ -195,13 +195,13 @@ export default function PresetsPage() {
 
       {/* Mini Player Footer */}
       {activePresetId && presets.some((p) => p.id === activePresetId) ? (
-        <footer className="h-24 bg-md-surface border-t border-md-outline/15 flex items-center px-8 justify-between shadow-md3-2 shrink-0 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-md-primary-container rounded-lg flex items-center justify-center text-md-primary">
-              <Icon name="music_note" className="text-3xl" />
+        <footer className="bg-md-surface border-t border-md-outline/15 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-4 py-4 sm:px-8 sm:py-0 sm:h-24 shadow-md3-2 shrink-0 relative z-10 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-md-primary-container rounded-lg flex items-center justify-center text-md-primary shrink-0">
+              <Icon name="music_note" className="text-2xl sm:text-3xl" />
             </div>
-            <div>
-              <h4 className="font-medium text-md-fg">
+            <div className="min-w-0">
+              <h4 className="font-medium text-md-fg truncate">
                 {presets.find((p) => p.id === activePresetId)?.name ?? 'Current Session'}
               </h4>
               <p className="text-md-on-surface-variant text-sm">
@@ -210,33 +210,35 @@ export default function PresetsPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-8">
-            <div className="hidden sm:flex items-center gap-2 text-sm text-md-on-surface-variant">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-8">
+            <div className="flex items-center justify-center gap-2 text-sm text-md-on-surface-variant sm:justify-start">
               <Icon name="timer" className="text-sm" />
               <span>{formatTime(elapsedTime)}</span>
               <span className="ml-2">Bar {measureCount}</span>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setView('performance')}
-                className="btn-tonal flex items-center gap-2 text-sm py-2 px-4"
+                className="btn-tonal flex-1 sm:flex-none flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 sm:py-2 px-3 sm:px-4"
               >
                 <Icon name="layers" className="text-base" />
-                PERFORMANCE
+                <span className="sm:hidden">Play</span>
+                <span className="hidden sm:inline">PERFORMANCE</span>
               </button>
               <button
                 onClick={() => setView('editor')}
-                className="btn-primary flex items-center gap-2 text-sm py-2 px-4"
+                className="btn-primary flex-1 sm:flex-none flex items-center justify-center gap-2 text-xs sm:text-sm py-2.5 sm:py-2 px-3 sm:px-4"
               >
                 <Icon name="tune" className="text-base" />
-                EDITOR
+                <span className="sm:hidden">Edit</span>
+                <span className="hidden sm:inline">EDITOR</span>
               </button>
             </div>
           </div>
         </footer>
       ) : (
-        <footer className="h-16 bg-md-surface border-t border-md-outline/15 flex items-center px-8 justify-center shrink-0 relative z-10">
+        <footer className="h-14 sm:h-16 bg-md-surface border-t border-md-outline/15 flex items-center px-4 sm:px-8 justify-center shrink-0 relative z-10 pb-[env(safe-area-inset-bottom)]">
           <p className="text-sm text-md-on-surface-variant">No preset loaded</p>
         </footer>
       )}

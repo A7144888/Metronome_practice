@@ -9,8 +9,13 @@ import PlaybackControls from '../components/PlaybackControls'
 import BeatIndicator from '../components/BeatIndicator'
 import Icon from '../components/Icon'
 import LibraryMenu from '../components/LibraryMenu'
+const DESKTOP_TABS = [
+  { id: 'beat', label: 'Beat', icon: 'music_note' },
+  { id: 'mixer', label: 'Mixer', icon: 'tune' },
+]
 
-const TABS = [
+const MOBILE_TABS = [
+  { id: 'tempo', label: 'Tempo', icon: 'speed' },
   { id: 'beat', label: 'Beat', icon: 'music_note' },
   { id: 'mixer', label: 'Mixer', icon: 'tune' },
 ]
@@ -65,6 +70,7 @@ export default function EditorPage() {
     updateActivePreset, activePresetId, presets,
   } = useMetronomeStore()
   const [activeTab, setActiveTab] = useState('beat')
+  const [mobileTab, setMobileTab] = useState('tempo')
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveName, setSaveName] = useState('')
   const [savedFlash, setSavedFlash] = useState(false)
@@ -159,15 +165,15 @@ export default function EditorPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden relative" ref={containerRef}>
+    <div className="flex-1 flex flex-col h-dvh overflow-hidden relative" ref={containerRef}>
       {/* MD3 organic blur shapes */}
       <div className="absolute -top-20 -left-20 w-64 h-64 bg-md-primary/8 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
       <div className="absolute bottom-20 -right-20 w-80 h-80 bg-md-tertiary/6 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
 
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-md-outline/15 px-6 py-4 bg-md-bg/80 backdrop-blur-md sticky top-0 z-50 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-md-primary flex items-center justify-center text-white shadow-md3-2 shrink-0">
+      <header className="flex items-center justify-between border-b border-md-outline/15 px-4 py-3 sm:px-6 sm:py-4 bg-md-bg/80 backdrop-blur-md sticky top-0 z-50 shrink-0 gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-md-primary flex items-center justify-center text-white shadow-md3-2 shrink-0">
             <Icon name="timer" />
           </div>
           <div className="hidden lg:block">
@@ -178,7 +184,13 @@ export default function EditorPage() {
           </div>
           <LibraryMenu />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          <div className="flex md:hidden flex-col items-end">
+            <span className="text-lg font-medium text-md-primary leading-none">{bpm}</span>
+            <span className="text-[10px] text-md-on-surface-variant/70 uppercase tracking-wide">
+              {timeSignature.beats}/{timeSignature.noteValue}
+            </span>
+          </div>
           <div className="hidden md:flex flex-col items-end">
             <span className="text-2xl font-medium text-md-primary">
               {bpm} <span className="text-sm font-normal text-md-on-surface-variant">BPM</span>
@@ -187,10 +199,10 @@ export default function EditorPage() {
               {timeSignature.beats}/{timeSignature.noteValue} Signature
             </span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2">
             <button
               onClick={handleSaveClick}
-              className="relative btn-tonal flex items-center gap-1 px-4 py-2 text-sm"
+              className="relative btn-tonal flex items-center gap-1 px-3 py-2 sm:px-4 text-sm"
               title={activePresetExists ? 'Save changes to current preset' : 'Save as new preset'}
             >
               <Icon name="save" className="text-base" />
@@ -204,7 +216,7 @@ export default function EditorPage() {
             <div className="relative" ref={fileMenuRef}>
               <button
                 onClick={() => setFileMenuOpen((o) => !o)}
-                className={`flex items-center gap-1 px-4 py-2 text-sm rounded-full transition-all duration-300 ease-md3 active:scale-95 ${
+                className={`flex items-center gap-1 px-3 py-2 sm:px-4 text-sm rounded-full transition-all duration-300 ease-md3 active:scale-95 ${
                   fileMenuOpen
                     ? 'bg-md-primary text-white shadow-md3-2'
                     : 'btn-tonal'
@@ -251,7 +263,7 @@ export default function EditorPage() {
             />
             <button
               onClick={() => setView('performance')}
-              className="btn-ghost flex items-center gap-1 px-4 py-2 text-sm"
+              className="btn-ghost flex items-center gap-1 px-3 py-2 sm:px-4 text-sm"
             >
               <Icon name="layers" className="text-base" />
               <span className="hidden sm:inline">Performance</span>
@@ -260,8 +272,63 @@ export default function EditorPage() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel */}
+      {/* ——— Mobile layout: fixed play strip + tabbed content + bottom BPM ——— */}
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0 lg:hidden">
+        <section
+          className="shrink-0 border-b border-md-outline/15 bg-md-surface/50 px-3 py-2 flex items-center gap-3"
+          aria-label="Playback"
+        >
+          <div className="flex-1 min-w-0 h-12">
+            <BeatIndicator fillHeight />
+          </div>
+          <PlaybackControls compact showStats />
+        </section>
+
+        <nav className="flex border-b border-md-outline/15 shrink-0 bg-md-bg" aria-label="Editor sections">
+          {MOBILE_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setMobileTab(tab.id)}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium border-b-2 transition-all duration-300 ease-md3 min-w-0 ${
+                mobileTab === tab.id
+                  ? 'border-md-primary text-md-primary bg-md-primary/5'
+                  : 'border-transparent text-md-on-surface-variant'
+              }`}
+            >
+              <Icon name={tab.icon} className="text-lg" />
+              <span className="truncate w-full text-center px-0.5">{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar min-h-0">
+          {mobileTab === 'tempo' && (
+            <div className="space-y-6">
+              <BpmControl />
+              <div className="border-t border-md-outline/15 pt-6">
+                <TimeSignatureControl />
+              </div>
+            </div>
+          )}
+          {mobileTab === 'beat' && (
+            <div className="flex flex-col gap-6">
+              <SequenceGrid />
+              <div className="border-t border-md-outline/15 pt-6">
+                <SubdivisionEditor />
+              </div>
+            </div>
+          )}
+          {mobileTab === 'mixer' && <MixerPanel />}
+        </div>
+
+        <footer className="shrink-0 border-t border-md-outline/15 bg-md-surface/95 backdrop-blur-md px-4 py-2.5 z-40 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <BpmControl compact dock />
+        </footer>
+      </div>
+
+      {/* ——— Desktop layout: resizable sidebar + editor panel ——— */}
+      <div className="hidden lg:flex flex-1 flex-row overflow-hidden min-h-0">
         <div
           className="flex flex-col overflow-y-auto custom-scrollbar shrink-0 bg-md-bg border-r border-md-outline/15"
           style={{ width: leftWidth }}
@@ -277,7 +344,6 @@ export default function EditorPage() {
           </div>
         </div>
 
-        {/* Horizontal Resize Handle */}
         <div
           onMouseDown={onHDragStart}
           className="w-1.5 shrink-0 cursor-col-resize group relative z-10 hover:bg-md-primary/20 active:bg-md-primary/30 transition-colors duration-150"
@@ -286,9 +352,7 @@ export default function EditorPage() {
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-md-outline/30 group-hover:bg-md-primary/60 transition-colors duration-150" />
         </div>
 
-        {/* Right Panel */}
         <div className="flex-1 flex flex-col overflow-hidden bg-md-bg min-w-0" ref={rightPanelRef}>
-          {/* Top: Beat Indicator */}
           <div
             className="shrink-0 border-b border-md-outline/15"
             style={{ height: topHeight }}
@@ -298,7 +362,6 @@ export default function EditorPage() {
             </div>
           </div>
 
-          {/* Vertical Resize Handle */}
           <div
             onMouseDown={onVDragStart}
             className="h-1.5 shrink-0 cursor-row-resize group relative z-10 hover:bg-md-primary/20 active:bg-md-primary/30 transition-colors duration-150"
@@ -307,11 +370,11 @@ export default function EditorPage() {
             <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-1 w-8 rounded-full bg-md-outline/30 group-hover:bg-md-primary/60 transition-colors duration-150" />
           </div>
 
-          {/* Tab Bar */}
           <div className="flex border-b border-md-outline/15 px-4 shrink-0">
-            {TABS.map((tab) => (
+            {DESKTOP_TABS.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all duration-300 ease-md3 ${
                   activeTab === tab.id
@@ -325,8 +388,7 @@ export default function EditorPage() {
             ))}
           </div>
 
-          {/* Tab Content */}
-          <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-5 custom-scrollbar min-h-0">
             {activeTab === 'beat' && (
               <div className="flex flex-col gap-6">
                 <SequenceGrid />
@@ -342,7 +404,7 @@ export default function EditorPage() {
 
       {/* Load Error Toast */}
       {loadError && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-md-error text-white px-6 py-3 rounded-full shadow-md3-3 flex items-center gap-3 text-sm font-medium animate-[fadeIn_0.2s_ease-out]">
+        <div className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-md-error text-white px-4 sm:px-6 py-3 rounded-full shadow-md3-3 flex items-center gap-3 text-sm font-medium animate-[fadeIn_0.2s_ease-out] max-w-[calc(100vw-2rem)]">
           <Icon name="error" className="text-base" />
           {loadError}
           <button onClick={() => setLoadError(null)} className="hover:opacity-80 active:scale-95">

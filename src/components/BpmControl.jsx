@@ -18,7 +18,7 @@ function getTempoLabel(bpm) {
   return t?.label ?? 'Presto'
 }
 
-export default function BpmControl({ compact = false }) {
+export default function BpmControl({ compact = false, dock = false }) {
   const { bpm, setBpm, adjustBpm } = useMetronomeStore()
   const [editing, setEditing] = useState(false)
   const [inputVal, setInputVal] = useState(String(bpm))
@@ -39,45 +39,63 @@ export default function BpmControl({ compact = false }) {
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => adjustBpm(-1)}
-          className="w-8 h-8 rounded-full bg-md-secondary-container flex items-center justify-center text-md-primary hover:bg-md-secondary-container/80 active:scale-95 transition-all duration-300 ease-md3"
-        >
-          <Icon name="remove" className="text-lg" />
-        </button>
-        <div className="text-center min-w-[80px]">
-          {editing ? (
-            <input
-              ref={inputRef}
-              className="w-20 text-center text-2xl font-medium bg-transparent border-b-2 border-md-primary outline-none text-md-fg"
-              value={inputVal}
-              onChange={(e) => setInputVal(e.target.value)}
-              onBlur={commit}
-              onKeyDown={handleKeyDown}
-              autoFocus
-            />
-          ) : (
-            <button
-              onClick={() => {
-                setInputVal(String(bpm))
-                setEditing(true)
-              }}
-              className="text-2xl font-medium hover:text-md-primary transition-colors duration-300 text-md-fg"
-            >
-              {bpm}
-            </button>
-          )}
-          <div className="text-xs text-md-primary font-medium tracking-widest uppercase">BPM</div>
+      <div className={`flex flex-col gap-2 ${dock ? 'w-full' : ''}`}>
+        <div className={`flex items-center gap-3 ${dock ? 'justify-between w-full' : ''}`}>
+          <button
+            type="button"
+            onClick={() => adjustBpm(-1)}
+            className="w-10 h-10 rounded-full bg-md-secondary-container flex items-center justify-center text-md-primary hover:bg-md-secondary-container/80 active:scale-95 transition-all duration-300 ease-md3 shrink-0"
+          >
+            <Icon name="remove" className="text-xl" />
+          </button>
+          <div className="text-center flex-1 min-w-0">
+            {editing ? (
+              <input
+                ref={inputRef}
+                className="w-full max-w-[5rem] mx-auto block text-center text-2xl font-medium bg-transparent border-b-2 border-md-primary outline-none text-md-fg"
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                onBlur={commit}
+                onKeyDown={handleKeyDown}
+                autoFocus
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setInputVal(String(bpm))
+                  setEditing(true)
+                }}
+                className="text-2xl font-medium hover:text-md-primary transition-colors duration-300 text-md-fg"
+              >
+                {bpm}
+              </button>
+            )}
+            <div className="text-[10px] text-md-on-surface-variant/70 italic">{getTempoLabel(bpm)}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => adjustBpm(1)}
+            className="w-10 h-10 rounded-full bg-md-secondary-container flex items-center justify-center text-md-primary hover:bg-md-secondary-container/80 active:scale-95 transition-all duration-300 ease-md3 shrink-0"
+          >
+            <Icon name="add" className="text-xl" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => adjustBpm(1)}
-          className="w-8 h-8 rounded-full bg-md-secondary-container flex items-center justify-center text-md-primary hover:bg-md-secondary-container/80 active:scale-95 transition-all duration-300 ease-md3"
-        >
-          <Icon name="add" className="text-lg" />
-        </button>
+        {dock && (
+          <input
+            type="range"
+            min="20"
+            max="300"
+            step="1"
+            value={bpm}
+            onChange={(e) => setBpm(Number(e.target.value))}
+            className="w-full h-2 rounded-full cursor-pointer touch-none"
+            style={{
+              background: `linear-gradient(to right, #6750A4 ${((bpm - 20) / 280) * 100}%, #E7E0EC ${((bpm - 20) / 280) * 100}%)`,
+            }}
+            aria-label="BPM slider"
+          />
+        )}
       </div>
     )
   }
@@ -117,7 +135,7 @@ export default function BpmControl({ compact = false }) {
                 setInputVal(String(bpm))
                 setEditing(true)
               }}
-              className="text-5xl font-medium hover:text-md-primary transition-colors duration-300 leading-none text-md-fg"
+              className="text-4xl sm:text-5xl font-medium hover:text-md-primary transition-colors duration-300 leading-none text-md-fg"
             >
               {bpm}
             </button>

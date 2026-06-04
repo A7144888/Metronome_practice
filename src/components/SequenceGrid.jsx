@@ -110,9 +110,9 @@ export default function SequenceGrid() {
             </div>
 
             {/* Notes row */}
-            <div className="flex items-stretch gap-0 h-14">
-              <div className="w-6 shrink-0" />
-              <div className="flex-1 flex items-stretch gap-0.5">
+            <div className="flex items-stretch gap-0 h-12 sm:h-14 overflow-x-auto custom-scrollbar min-w-0">
+              <div className="w-5 sm:w-6 shrink-0" />
+              <div className="flex-1 flex items-stretch gap-0.5 min-w-[180px]">
                 {allNotes
                   .filter((n) => n.measureId === measure.id)
                   .map((note) => {

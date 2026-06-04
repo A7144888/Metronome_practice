@@ -9,7 +9,7 @@ function formatTime(secs) {
   return `${m}:${s}`
 }
 
-export default function PlaybackControls({ compact = false }) {
+export default function PlaybackControls({ compact = false, showStats = false }) {
   const { isPlaying, elapsedTime, measureCount, timeSignature, measures } = useMetronomeStore()
   const { play, stop, pause } = useMetronome()
 
@@ -20,23 +20,38 @@ export default function PlaybackControls({ compact = false }) {
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3">
-        <button
-          onClick={stop}
-          className="size-10 rounded-full bg-md-surface-low flex items-center justify-center text-md-on-surface-variant hover:bg-md-surface-low/80 active:scale-95 transition-all duration-300 ease-md3"
-        >
-          <Icon name="stop" className="text-xl" />
-        </button>
-        <button
-          onClick={isPlaying ? pause : play}
-          disabled={!canPlay}
-          title={!canPlay ? 'Every beat must be exactly full before playing' : (isPlaying ? 'Pause' : 'Play')}
-          className={`size-14 rounded-full flex items-center justify-center text-white shadow-md3-3 transition-all duration-300 ease-md3 ${
-            canPlay ? 'bg-md-primary hover:bg-md-primary/90 active:scale-95' : 'bg-md-outline/40 cursor-not-allowed opacity-60'
-          }`}
-        >
-          <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-3xl" />
-        </button>
+      <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={stop}
+            className="size-10 rounded-full bg-md-surface-low flex items-center justify-center text-md-on-surface-variant hover:bg-md-surface-low/80 active:scale-95 transition-all duration-300 ease-md3"
+            title="Stop"
+          >
+            <Icon name="stop" className="text-xl" />
+          </button>
+          <button
+            type="button"
+            onClick={isPlaying ? pause : play}
+            disabled={!canPlay}
+            title={!canPlay ? 'Every beat must be exactly full before playing' : (isPlaying ? 'Pause' : 'Play')}
+            className={`size-14 rounded-full flex items-center justify-center text-white shadow-md3-3 transition-all duration-300 ease-md3 ${
+              canPlay ? 'bg-md-primary hover:bg-md-primary/90 active:scale-95' : 'bg-md-outline/40 cursor-not-allowed opacity-60'
+            }`}
+          >
+            <Icon name={isPlaying ? 'pause' : 'play_arrow'} className="text-3xl" />
+          </button>
+        </div>
+        {showStats && (
+          <p className="text-[10px] font-mono text-md-on-surface-variant/80 tabular-nums">
+            {formatTime(elapsedTime)} · Bar {measureCount}
+          </p>
+        )}
+        {!canPlay && (
+          <p className="text-[9px] text-md-error text-center max-w-[7rem] leading-tight">
+            Fill beats to play
+          </p>
+        )}
       </div>
     )
   }

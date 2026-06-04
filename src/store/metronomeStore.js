@@ -8,7 +8,8 @@ import {
   measureUsedTicks,
   isMeasureFull,
   validateStructure,
-  hasBinaryTernaryConflict,
+  hasBinaryTernaryConflictAtTick,
+  hasBinaryTernaryConflictForNote,
 } from '../engine/musicTheory'
 
 /**
@@ -236,8 +237,10 @@ export const useMetronomeStore = create((set, get) => ({
       if (remaining <= 0) return {}
 
       const candidates = NOTE_VALUES.filter((nv) => {
-        if (hasBinaryTernaryConflict(measure.subdivisions, nv)) return false
-        return subdivDurationTicks({ value: nv, dotted: false }) <= remaining
+        const dur = subdivDurationTicks({ value: nv, dotted: false })
+        if (dur > remaining) return false
+        if (hasBinaryTernaryConflictAtTick(measure, used, nv, noteValue, dur)) return false
+        return true
       })
       if (candidates.length === 0) return {}
       const bestValue = candidates[0]
@@ -330,17 +333,18 @@ export const useMetronomeStore = create((set, get) => ({
     set((s) => {
       const measure = s.measures.find((m) => m.id === measureId)
       const sd      = measure?.subdivisions.find((x) => x.id === subdivId)
-      if (!sd) return {}
+      if (!sd || !measure) return {}
 
-      const otherSubs = measure.subdivisions.filter((x) => x.id !== subdivId)
-      if (hasBinaryTernaryConflict(otherSubs, value)) return {}
+      const { beats, noteValue } = s.timeSignature
+
+      if (hasBinaryTernaryConflictForNote(measure, subdivId, value, noteValue)) return {}
 
       let dotted = sd.dotted
       if (value === 'triplet') dotted = false
 
+      const otherSubs  = measure.subdivisions.filter((x) => x.id !== subdivId)
       const otherTicks = measureUsedTicks(otherSubs)
       const newTicks   = subdivDurationTicks({ value, dotted })
-      const { beats, noteValue } = s.timeSignature
       const cap        = measureCapacityTicks(beats, noteValue)
 
       if (otherTicks + newTicks > cap) {

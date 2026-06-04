@@ -121,7 +121,7 @@ export function getSubdivBeatIndex(measure, sdIndex, noteValue) {
   return Math.floor(tickPos / beatCap)
 }
 
-// ── Binary / Ternary conflict ────────────────────────────────────────────────
+// ── Binary / Ternary conflict (per-beat, 樂理) ───────────────────────────────
 
 /** True when the note value belongs to the ternary (triplet) subdivision family. */
 export function isTripletValue(value) {
@@ -129,17 +129,96 @@ export function isTripletValue(value) {
 }
 
 /**
- * Binary (whole/half/quarter/eighth/sixteenth/thirty-second) and ternary (triplet)
- * subdivisions must not coexist in the same measure — mixing them creates tick gaps
- * that no standard note value can fill, violating music theory grouping rules.
- *
- * Returns true when adding `newValue` to `subdivisions` would cause a conflict.
+ * Within one scope (typically a single beat), binary and triplet subdivisions
+ * must not mix — e.g. an eighth plus a triplet eighth in the same beat leaves
+ * unfillable tick gaps (⅓-beat units vs ½-beat units).
  */
 export function hasBinaryTernaryConflict(subdivisions, newValue) {
   if (subdivisions.length === 0) return false
   const newIsTriplet = isTripletValue(newValue)
-  if (newIsTriplet) return subdivisions.some(sd => !isTripletValue(sd.value))
-  return subdivisions.some(sd => isTripletValue(sd.value))
+  if (newIsTriplet) return subdivisions.some((sd) => !isTripletValue(sd.value))
+  return subdivisions.some((sd) => isTripletValue(sd.value))
+}
+
+/** Tick span [start, end) for a subdivision in measure order. */
+export function getSubdivTickSpan(measure, subdivId) {
+  let pos = 0
+  for (const sd of measure.subdivisions) {
+    const dur = subdivDurationTicks(sd)
+    if (sd.id === subdivId) return { start: pos, end: pos + dur }
+    pos += dur
+  }
+  return null
+}
+
+/** Subdivisions overlapping [rangeStart, rangeEnd), optionally excluding one id. */
+export function subdivisionsInTickRange(measure, rangeStart, rangeEnd, excludeId = null) {
+  let pos = 0
+  const result = []
+  for (const sd of measure.subdivisions) {
+    const dur = subdivDurationTicks(sd)
+    const sdStart = pos
+    const sdEnd = pos + dur
+    pos += dur
+    if (excludeId && sd.id === excludeId) continue
+    if (sdEnd > rangeStart && sdStart < rangeEnd) result.push(sd)
+  }
+  return result
+}
+
+function beatsTouchedBySpan(start, end, beatCap) {
+  const beats = []
+  const first = Math.floor(start / beatCap)
+  const last = Math.floor((end - 1) / beatCap)
+  for (let b = first; b <= last; b++) beats.push(b)
+  return beats
+}
+
+/**
+ * True if placing/changing a note to `newValue` would mix binary and triplet
+ * within any beat the note touches. Different beats may use different grouping.
+ */
+export function hasBinaryTernaryConflictForNote(measure, subdivId, newValue, noteValue, dotted) {
+  const sd = measure.subdivisions.find((x) => x.id === subdivId)
+  if (!sd) return false
+
+  let pos = 0
+  for (const s of measure.subdivisions) {
+    if (s.id === subdivId) break
+    pos += subdivDurationTicks(s)
+  }
+
+  const useDotted = newValue === 'triplet' ? false : (dotted !== undefined ? dotted : sd.dotted)
+  const newDur = subdivDurationTicks({ value: newValue, dotted: useDotted })
+  const start = pos
+  const end = pos + newDur
+  const beatCap = beatCapacityTicks(noteValue)
+
+  for (const beatIdx of beatsTouchedBySpan(start, end, beatCap)) {
+    const beatStart = beatIdx * beatCap
+    const beatEnd = beatStart + beatCap
+    const rangeStart = Math.max(start, beatStart)
+    const rangeEnd = Math.min(end, beatEnd)
+    const inBeat = subdivisionsInTickRange(measure, rangeStart, rangeEnd, subdivId)
+    if (hasBinaryTernaryConflict(inBeat, newValue)) return true
+  }
+  return false
+}
+
+/** Conflict check when inserting a new note at `tickStart` with the given duration. */
+export function hasBinaryTernaryConflictAtTick(measure, tickStart, newValue, noteValue, durationTicks) {
+  const end = tickStart + durationTicks
+  const beatCap = beatCapacityTicks(noteValue)
+
+  for (const beatIdx of beatsTouchedBySpan(tickStart, end, beatCap)) {
+    const beatStart = beatIdx * beatCap
+    const beatEnd = beatStart + beatCap
+    const rangeStart = Math.max(tickStart, beatStart)
+    const rangeEnd = Math.min(end, beatEnd)
+    const inBeat = subdivisionsInTickRange(measure, rangeStart, rangeEnd, null)
+    if (hasBinaryTernaryConflict(inBeat, newValue)) return true
+  }
+  return false
 }
 
 // ── Display helpers ──────────────────────────────────────────────────────────

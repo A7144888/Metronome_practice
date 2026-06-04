@@ -10,7 +10,7 @@ import {
   measureCapacityTicks,
   measureUsedTicks,
   relativeBeatCount,
-  hasBinaryTernaryConflict,
+  hasBinaryTernaryConflictForNote,
 } from '../engine/musicTheory'
 import Icon from './Icon'
 
@@ -72,7 +72,7 @@ function NoteValuePicker({ sd, measureId, measure, timeSignature, store }) {
         const dur       = subdivDurationTicks({ value: nv, dotted: nv === 'triplet' ? false : sd.dotted })
         const otherUsed = measureUsedTicks(otherSubs)
         const wouldOver = otherUsed + dur > cap
-        const conflict  = hasBinaryTernaryConflict(otherSubs, nv)
+        const conflict  = hasBinaryTernaryConflictForNote(measure, sd.id, nv, noteValue)
         const isActive  = sd.value === nv
 
         return (
@@ -266,7 +266,7 @@ export default function SubdivisionEditor() {
           <div key={measure.id} className="flex flex-col gap-3">
             <MeasureCapacityBar measure={measure} beats={beats} noteValue={noteValue} />
 
-            <div className="flex flex-wrap gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {measure.subdivisions.map((sd, sdIdx) => {
                 const sdBeatIdx = Math.floor(tickPos / beatCap)
                 const isActive  = isPlaying && currentBeat === sdBeatIdx && currentSubdivision === sdIdx

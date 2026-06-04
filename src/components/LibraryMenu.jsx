@@ -36,7 +36,7 @@ export default function LibraryMenu() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ease-md3 active:scale-95 ${
+        className={`flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 rounded-full text-sm font-medium transition-all duration-300 ease-md3 active:scale-95 ${
           isOnLibrary || open
             ? 'bg-md-secondary-container text-md-primary'
             : 'bg-md-surface hover:bg-md-primary/10 text-md-on-surface-variant'

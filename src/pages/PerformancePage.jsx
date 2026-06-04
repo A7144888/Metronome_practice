@@ -155,14 +155,14 @@ export default function PerformancePage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-md-bg relative overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-dvh bg-md-bg relative overflow-hidden">
       {/* MD3 organic blur shapes */}
       <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-md-primary/8 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
       <div className="absolute bottom-0 -right-32 w-80 h-80 bg-md-tertiary/6 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
       <div className="absolute bottom-1/4 -left-32 w-64 h-64 bg-md-secondary-container/30 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
 
       {/* Top Navigation */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-md-outline/15 bg-md-bg/80 backdrop-blur-md relative z-10">
+      <header className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-md-outline/15 bg-md-bg/80 backdrop-blur-md relative z-10">
         <div className="flex items-center gap-3">
           <Icon name="layers" className="text-md-primary text-3xl" />
           <h2 className="hidden sm:block text-xl font-medium tracking-tight text-md-fg">Performance View</h2>
@@ -186,19 +186,19 @@ export default function PerformancePage() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-around p-6 max-w-2xl mx-auto w-full gap-6 relative z-10">
+      <main className="flex-1 flex flex-col items-center justify-around p-4 sm:p-6 max-w-2xl mx-auto w-full gap-4 sm:gap-6 relative z-10 min-h-0 overflow-y-auto">
         {/* Tempo Display */}
-        <div className="text-center w-full">
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 mb-2">
-            <div aria-hidden="true" />
+        <div className="text-center w-full shrink-0">
+          <div className="flex flex-col items-center gap-4 mb-2 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+            <div className="hidden sm:block" aria-hidden="true" />
 
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => adjustBpm(-1)}
-                className="size-14 flex items-center justify-center rounded-full bg-md-secondary-container active:scale-95 hover:bg-md-secondary-container/80 transition-all duration-300 ease-md3 shrink-0"
+                className="size-12 sm:size-14 flex items-center justify-center rounded-full bg-md-secondary-container active:scale-95 hover:bg-md-secondary-container/80 transition-all duration-300 ease-md3 shrink-0"
               >
-                <Icon name="remove" className="text-3xl text-md-primary" />
+                <Icon name="remove" className="text-2xl sm:text-3xl text-md-primary" />
               </button>
               <div className="flex flex-col items-center shrink-0">
                 {editingBpm ? (
@@ -207,7 +207,7 @@ export default function PerformancePage() {
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    className="w-32 text-center text-6xl font-medium bg-transparent border-b-2 border-md-primary outline-none leading-none text-md-fg"
+                    className="w-28 sm:w-32 text-center text-5xl sm:text-6xl font-medium bg-transparent border-b-2 border-md-primary outline-none leading-none text-md-fg"
                     value={bpmInput}
                     onChange={(e) => setBpmInput(e.target.value.replace(/[^0-9]/g, ''))}
                     onBlur={commitBpm}
@@ -222,7 +222,7 @@ export default function PerformancePage() {
                       setEditingBpm(true)
                     }}
                     title="Click to edit"
-                    className="text-6xl font-medium hover:text-md-primary transition-colors duration-300 leading-none text-md-fg"
+                    className="text-5xl sm:text-6xl font-medium hover:text-md-primary transition-colors duration-300 leading-none text-md-fg"
                   >
                     {bpm}
                   </button>
@@ -232,13 +232,13 @@ export default function PerformancePage() {
               <button
                 type="button"
                 onClick={() => adjustBpm(1)}
-                className="size-14 flex items-center justify-center rounded-full bg-md-secondary-container active:scale-95 hover:bg-md-secondary-container/80 transition-all duration-300 ease-md3 shrink-0"
+                className="size-12 sm:size-14 flex items-center justify-center rounded-full bg-md-secondary-container active:scale-95 hover:bg-md-secondary-container/80 transition-all duration-300 ease-md3 shrink-0"
               >
-                <Icon name="add" className="text-3xl text-md-primary" />
+                <Icon name="add" className="text-2xl sm:text-3xl text-md-primary" />
               </button>
             </div>
 
-            <div className="flex justify-start">
+            <div className="flex justify-center w-full max-w-xs sm:max-w-[180px] sm:justify-start px-2 sm:px-0">
               <input
                 type="range"
                 min="20"
@@ -246,7 +246,7 @@ export default function PerformancePage() {
                 step="1"
                 value={bpm}
                 onChange={(e) => setBpm(Number(e.target.value))}
-                className="w-full max-w-[180px] h-1.5 cursor-pointer"
+                className="w-full h-2 sm:h-1.5 cursor-pointer touch-none"
                 style={{
                   borderRadius: '9999px',
                   background: `linear-gradient(to right, #6750A4 ${((bpm - 20) / 280) * 100}%, #E7E0EC ${((bpm - 20) / 280) * 100}%)`,
@@ -264,7 +264,7 @@ export default function PerformancePage() {
           disabled={!canPlay}
           title={!canPlay ? 'Every beat must be exactly full before playing' : (isPlaying ? 'Pause' : 'Play')}
           style={{ borderRadius: '50%' }}
-          className={`relative w-full aspect-square max-w-[320px] flex items-center justify-center transition-all duration-300 ease-md3 group ${
+          className={`relative w-full aspect-square max-w-[260px] sm:max-w-[320px] flex items-center justify-center transition-all duration-300 ease-md3 group shrink-0 ${
             canPlay ? 'cursor-pointer active:scale-95' : 'cursor-not-allowed opacity-60'
           }`}
         >
@@ -319,7 +319,7 @@ export default function PerformancePage() {
           })}
 
           <div className="flex flex-col items-center justify-center text-center pointer-events-none">
-            <span className="text-7xl font-medium leading-none text-md-primary">
+            <span className="text-6xl sm:text-7xl font-medium leading-none text-md-primary">
               {isPlaying ? (currentBeat >= 0 ? currentBeat + 1 : 1) : '•'}
             </span>
             <span className="text-sm font-medium text-md-on-surface-variant mt-3 uppercase tracking-widest">
@@ -329,7 +329,7 @@ export default function PerformancePage() {
         </button>
 
         {/* Sequence Grid (read-only) */}
-        <div className="w-full">
+        <div className="w-full min-w-0 overflow-x-auto custom-scrollbar shrink-0">
           {measures.map((measure) => {
             const { beats, noteValue: nv } = timeSignature
             const beatCap = beatCapacityTicks(nv)
@@ -377,7 +377,7 @@ export default function PerformancePage() {
                   ))}
                 </div>
 
-                <div className="flex items-stretch gap-0.5 h-16">
+                <div className="flex items-stretch gap-0.5 h-14 sm:h-16 min-w-[200px]">
                   {notes.map((note) => {
                     const isActive =
                       isPlaying && note.beatIdx === currentBeat && note.sdIdx === currentSubdivision
@@ -425,20 +425,20 @@ export default function PerformancePage() {
       </main>
 
       {/* Footer Stats */}
-      <footer className="p-6 grid grid-cols-4 gap-4 border-t border-md-outline/15 bg-md-surface/60 backdrop-blur-sm relative z-10">
+      <footer className="p-4 sm:p-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 border-t border-md-outline/15 bg-md-surface/60 backdrop-blur-sm relative z-10 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="flex flex-col items-center">
           <span className="text-xs uppercase tracking-widest text-md-on-surface-variant/60 font-medium">Time Sig</span>
           <span className="text-xl font-medium text-md-fg">{timeSignature.beats} / {timeSignature.noteValue}</span>
         </div>
-        <div className="flex flex-col items-center border-l border-md-outline/15">
+        <div className="flex flex-col items-center sm:border-l border-md-outline/15">
           <span className="text-xs uppercase tracking-widest text-md-on-surface-variant/60 font-medium">Measure</span>
           <span className="text-xl font-medium text-md-fg">{measureCount}</span>
         </div>
-        <div className="flex flex-col items-center border-l border-md-outline/15">
+        <div className="flex flex-col items-center border-t sm:border-t-0 sm:border-l border-md-outline/15 pt-3 sm:pt-0">
           <span className="text-xs uppercase tracking-widest text-md-on-surface-variant/60 font-medium">Timer</span>
           <span className="text-xl font-medium text-md-fg">{formatTime(elapsedTime)}</span>
         </div>
-        <div className="flex flex-col items-center justify-center border-l border-md-outline/15">
+        <div className="flex flex-col items-center justify-center border-t sm:border-t-0 sm:border-l border-md-outline/15 pt-3 sm:pt-0">
           <button
             type="button"
             onClick={stop}
